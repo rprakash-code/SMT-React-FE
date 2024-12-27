@@ -1,0 +1,151 @@
+@use '../scss/abstract/variables' as variables;
+@use '../scss/abstract/break_points' as breakpoints;
+
+.tickect-page {
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+    // margin-top: 10px;
+
+    &.dark-mode {
+        .header {
+            h2 {
+                color: white;
+            }
+        }
+        .ticket-history-container{
+            border: 2px solid white;
+
+            .ticket-table{
+                thead{
+                    th{
+                        color: white;
+                    }
+                }
+                tbody{
+                    tr{
+                        td{
+                            color: white;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    .header {
+        // display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1px;
+        position: relative;
+
+        h2 {
+            font-size: 17px;
+            color:variables.$default-colr;
+            margin: 0;
+            // text-decoration: underline;
+            // margin-top: 40px;
+            text-wrap: nowrap;
+            // position: absolute;
+            // margin-top: -12rem;
+            font-weight: 700;
+            text-align: justify;
+        }
+
+
+    }
+
+    .ticket-history-container {
+        // width: 97%;
+        // max-width: 600px;
+        // margin: 20px auto;
+        border: 2px solid variables.$default-colr;
+        // background-color: black;
+        border-radius: 5px;
+        color: variables.$secondary-color;
+        //   height: 14rem;
+        //   margin-top: 35px;
+        padding: 10px;
+        max-height: 200px;
+        height: 100%;
+
+
+
+        .ticket-table {
+            width: 100%;
+            border-collapse: collapse;
+
+            .loading-spinner {
+                // display: flex;
+                // justify-content: center;
+                // align-items: center;
+                // // height: 100px;
+                font-size: 30px;
+                // font-weight: bold;
+                // width: 100px;
+                // height: 100px;
+                color: variables.$btn-color;
+            }
+
+            thead {
+                th {
+                    color:variables.$default-colr;
+                    text-align: left;
+                    // border-bottom: 2px solid limegreen;
+                    padding: 8px;
+                    font-size: 0.9rem;
+                }
+            }
+
+            tbody {
+                tr {
+                    &:hover {
+                        background-color: lightgrey;
+                        border-radius: 10px;
+                    }
+
+                    td {
+                        color:variables.$default-colr;
+                        padding: 8px;
+                        font-size: 0.85rem;
+                        border-bottom: 1px solid variables.$secondary-color;
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-xl){
+    .tickect-page{
+        .header{
+            h2{
+                font-size: 15px;
+            }
+        }
+        .ticket-history-container{
+            min-height: 90px;
+            height: 0%;
+        }
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-xl-min) {
+    .tickect-page {
+        width: 95%;
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-md-min) {
+    .tickect-page {
+        width: 130%;
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-sm) {
+    .tickect-page {
+        width: 85%;
+    }
+}

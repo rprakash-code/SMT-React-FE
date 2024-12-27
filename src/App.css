@@ -1,0 +1,20 @@
+:root {
+  --background-color: white;
+  --text-color: black;
+}
+
+.dark-mode {
+  --background-color: black;
+  --text-color: white;
+}
+
+#root {
+  margin: 0 auto;
+  text-align: center;
+  width: 100%;
+  overflow-x: hidden;
+  height: 100vh;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+}

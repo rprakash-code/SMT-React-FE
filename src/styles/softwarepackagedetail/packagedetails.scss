@@ -1,0 +1,685 @@
+@use '../scss/abstract/variables' as variables;
+@use '../scss/abstract/break_points' as breakpoints;
+
+.software-package-details {
+    margin: 30px 0;
+    padding: 15px;
+    border-radius: 5px;
+    color: variables.$secondary-color;
+    width: 50%;
+    margin-top: 45px;
+
+    &.dark-mode {
+        background-color: black !important;
+        color: #f5f5f5 !important;
+
+        .package-detail {
+            .detail-item {
+                span {
+                    color: white;
+                }
+
+                strong {
+                    color: white;
+                }
+            }
+
+        }
+
+        .owner-title {
+            h4 {
+                color: white;
+            }
+
+        }
+
+        .owner-details {
+            .detail-item {
+                span {
+                    color: white;
+                }
+
+                strong {
+                    color: white;
+                }
+            }
+        }
+
+        .title-sec {
+            .user-title {
+                color: white;
+            }
+
+            .checkbox-wrapper {
+                .user {
+                    color: white;
+                }
+
+                .css-1umw9bq-MuiSvgIcon-root {
+                    fill: white;
+                }
+            }
+        }
+
+        .user-list-container {
+            border: 2px solid white;
+
+            .user-list {
+                .user-row {
+                    .user-number {
+                        color: white;
+                    }
+
+                    .user-details {
+                        .user-info {
+                            p {
+                                color: white;
+                            }
+                        }
+
+                        .user-meta {
+                            p {
+                                color: white;
+                            }
+
+                            .css-1umw9bq-MuiSvgIcon-root {
+                                fill: white;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .right-title {
+        position: relative;
+
+        h3 {
+            color: black;
+            position: absolute;
+            /* text-decoration: underline; */
+            top: -5rem;
+            font-weight: 700;
+            font-size: 17px;
+        }
+    }
+
+    .package-detail {
+        display: flex;
+        text-align: justify;
+        gap: 13px;
+        margin-top: -38px;
+        margin-right: 1rem;
+        // flex-wrap: wrap;
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+
+            .error-message {
+                color: red;
+                font-size: 12px;
+                margin-top: -1px;
+                margin-bottom: -8px;
+            }
+
+            .suggestions-list {
+                color: black !important;
+                // position: absolute;
+                background-color: white;
+                /* Background color of the suggestion box */
+                border: 1px solid #ccc;
+                /* Border styling */
+                border-radius: 4px;
+                /* Rounded corners */
+                max-height: 150px;
+                /* Max height for scrollable list */
+                overflow-y: auto;
+                /* Add scroll if content exceeds max height */
+                z-index: 1000 !important;
+                /* Ensure the suggestions appear above other elements */
+                width: 100%;
+                /* Match the input width */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                /* Optional shadow for better visibility */
+                list-style: none;
+                /* Remove default list styling */
+                margin: 0;
+                /* Remove default margin */
+                padding: 0;
+                /* Remove default padding */
+            }
+
+            .suggestion-item {
+                padding: 8px 12px;
+                /* Padding for each suggestion */
+                cursor: pointer;
+                /* Pointer cursor to indicate clickable items */
+                font-size: 14px;
+                /* Font size */
+            }
+
+            .suggestion-item:hover,
+            .suggestion-item.active {
+                background-color: #007bff;
+                /* Highlight color for hover or active state */
+                color: white;
+                /* Text color for highlighted item */
+            }
+
+
+            .ad,
+            .ad-str {
+                margin-left: -4rem;
+                text-wrap: nowrap;
+            }
+
+            span {
+                display: flex;
+                font-size: 13px;
+                color: variables.$default-colr;
+                text-wrap: nowrap;
+                font-weight: 700;
+            }
+
+            strong {
+                color: variables.$default-colr;
+                font-size: 10px;
+                font-weight: 500;
+                // text-wrap: nowrap;
+            }
+
+            input {
+                width: 8rem;
+                height: 20px;
+                border: 1px solid black;
+                background-color: white;
+                color: black;
+            }
+        }
+    }
+
+    .owner-title {
+        position: relative;
+
+        h4 {
+            color: variables.$default-colr;
+            position: absolute;
+            // text-decoration: underline;
+            top: -10px;
+            font-size: 13px;
+        }
+    }
+
+    .owner-details {
+        display: flex;
+        text-align: justify;
+        gap: 25px;
+        margin-top: 35px;
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+
+            .error-message {
+                color: red;
+                font-size: 12px;
+                margin-top: -1px;
+                margin-bottom: -8px;
+            }
+
+            .suggestions-list {
+                color: black !important;
+                // position: absolute;
+                background-color: white;
+                /* Background color of the suggestion box */
+                border: 1px solid #ccc;
+                /* Border styling */
+                border-radius: 4px;
+                /* Rounded corners */
+                max-height: 150px;
+                /* Max height for scrollable list */
+                overflow-y: auto;
+                /* Add scroll if content exceeds max height */
+                z-index: 1000 !important;
+                /* Ensure the suggestions appear above other elements */
+                width: 100%;
+                /* Match the input width */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                /* Optional shadow for better visibility */
+                list-style: none;
+                /* Remove default list styling */
+                margin: 0;
+                /* Remove default margin */
+                padding: 0;
+                /* Remove default padding */
+            }
+
+            .suggestion-item {
+                padding: 8px 12px;
+                /* Padding for each suggestion */
+                cursor: pointer;
+                /* Pointer cursor to indicate clickable items */
+                font-size: 14px;
+                /* Font size */
+            }
+
+            .suggestion-item:hover,
+            .suggestion-item.active {
+                background-color: #007bff;
+                /* Highlight color for hover or active state */
+                color: white;
+                /* Text color for highlighted item */
+            }
+
+            .ad,
+            .ad-str {
+                margin-left: -4rem;
+            }
+
+            span {
+                display: flex;
+                font-size: 10px;
+                color: variables.$default-colr;
+                text-wrap: nowrap;
+                font-weight: 700;
+            }
+
+            strong {
+                color: variables.$default-colr;
+                font-size: 10px;
+                font-weight: 500;
+            }
+
+            input {
+                width: 8rem;
+                height: 20px;
+                border: 1px solid black;
+                background-color: white;
+                color: black;
+            }
+        }
+    }
+
+    .title-sec {
+        position: relative;
+
+        .user-title {
+            color: #31322a;
+            position: absolute;
+            /* text-decoration: underline; */
+            top: -17px;
+            font-size: 16px;
+            // padding-right: 20px;
+            // margin-top: -10px;
+        }
+
+        .checkbox-wrapper {
+            margin-left: 18rem;
+            display: flex;
+
+            .user {
+                // padding-left: 85px;
+                color: variables.$default-colr;
+                margin-top: 7px;
+            }
+
+            .css-1umw9bq-MuiSvgIcon-root {
+                fill: currentColor;
+            }
+
+        }
+
+    }
+
+    .user-list-container {
+        max-height: 100px;
+        overflow-y: auto;
+        border: 1px solid #31322a;
+        /* padding: 8px; */
+        height: 7rem;
+        margin-right: 1rem;
+        // margin-top: 27px;
+
+        &::-webkit-scrollbar {
+            height: 4px;
+            /* Slimmer horizontal scrollbar */
+            width: 4px;
+            /* Slimmer vertical scrollbar */
+        }
+
+        &::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            /* Light gray track for a clean appearance */
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: #b0b0b0;
+            /* Gray thumb for a neutral, linear look */
+            border-radius: 0;
+            /* No rounded corners for a linear design */
+        }
+
+        &::-webkit-scrollbar-thumb:hover {
+            background: #909090;
+            /* Slightly darker gray on hover */
+        }
+
+        /* Firefox styles */
+        scrollbar-width: thin;
+        /* Thinner scrollbar */
+        scrollbar-color: #b0b0b0 #e0e0e0;
+
+        /* Thumb and track colors */
+        .user-list {
+            .user-row {
+                display: flex;
+                align-items: center;
+                border-bottom: 1px solid variables.$secondary-color;
+
+                &:last-child {
+                    border-bottom: none;
+                }
+
+                .user-number {
+                    width: 30px;
+                    text-align: center;
+                    font-weight: bold;
+                    color: variables.$default-colr;
+                }
+
+                .user-details {
+                    flex-grow: 1;
+                    display: flex;
+                    justify-content: space-between;
+                    color: variables.$secondary-color;
+
+                    .user-info,
+                    .user-meta {
+                        margin-right: 8px;
+
+                        .remove-option {
+                            margin-top: -7px;
+                        }
+
+                        p {
+                            margin: 8px 0;
+                            color: variables.$default-colr;
+                            font-size: 13px;
+                        }
+
+                        a {
+                            color: variables.$primary-color;
+                            text-decoration: none;
+                        }
+
+                        .css-1umw9bq-MuiSvgIcon-root {
+                            font-size: 15px;
+                            fill: currentColor;
+                        }
+                    }
+
+                    .user-name {
+                        color: variables.$text-color;
+                    }
+
+                    // .user-mail {
+                    //     a {
+                    //         // color: $secondary-color;
+                    //     }
+                    // }
+
+                    .remove-option {
+                        label {
+                            color: variables.$highlight-color;
+                            font-size: 0.85rem;
+
+                            .custom-checkbox {
+                                width: 16px;
+                                height: 16px;
+                                cursor: pointer;
+                                accent-color: blue;
+                                /* Changes the checkmark color to blue */
+                            }
+
+                            .custom-checkbox:checked {
+                                border-color: blue;
+                            }
+
+                        }
+                    }
+
+                    .user-mail {
+                        margin-top: 8px;
+                        font-size: 13px;
+                        margin-right: 13px;
+                    }
+                }
+            }
+        }
+    }
+
+    .footer {
+        text-align: center;
+        margin-top: 7px;
+
+        .review-complete {
+            background-color: variables.$btn-color;
+            color: variables.$secondary-color;
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            width: 95%;
+        }
+
+        .custom-dialog {
+            .MuiDialog-paper {
+                border-radius: 12px;
+                background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+                padding: 20px;
+            }
+
+            .dialog-title {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+
+                .dialog-icon {
+                    color: #4caf50;
+                    margin-right: 10px;
+                }
+
+                .close-btn {
+                    color: #757575;
+                }
+            }
+
+            .dialog-content-text {
+                font-size: 1.1rem;
+                color: #333;
+                text-align: center;
+                margin-top: 10px;
+            }
+
+            .cancel-btn {
+                background-color: #f44336;
+                color: white;
+                text-transform: none;
+
+                &:hover {
+                    background-color: #d32f2f;
+                }
+            }
+
+            .submit-btn {
+                background-color: #4caf50;
+                color: white;
+                text-transform: none;
+
+                &:hover {
+                    background-color: #388e3c;
+                }
+            }
+        }
+
+    }
+}
+
+
+
+@media screen and (max-width:breakpoints.$screen-xl) {
+    .software-package-details {
+
+        .title-sec {
+            .user-title {
+                top: -10px;
+                font-size: 13px;
+            }
+
+            .checkbox-wrapper {
+                margin-top: -7px;
+                .css-1umw9bq-MuiSvgIcon-root {
+                    font-size: 15px;
+                }
+
+                .user {
+                    font-size: 13px;
+                }
+            }
+        }
+
+        .package-detail {
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: -55px;
+
+            .detail-item {
+                gap: 0px;
+
+                .ad,
+                .ad-str {
+                    margin-left: 0;
+                }
+
+                input {
+                    height: 15px;
+                }
+                span{
+                    font-size: 10px;
+                }
+            }
+        }
+
+        .owner-title {
+            h4 {
+                top: -13px;
+            }
+        }
+
+        .owner-details {
+            margin-top: 27px;
+            gap: 15px;
+
+            .detail-item {
+                gap: 0px;
+
+                input {
+                    height: 15px;
+                }
+            }
+        }
+
+        .right-title {
+            h3 {
+                font-size: 15px;
+                margin-top: 3px;
+            }
+        }
+
+        .user-list-container {
+            max-height: 63px;
+            margin-top: -4px;
+            .user-list {
+
+                .user-row {
+
+                    .user-details {
+
+                        .user-info {
+                            p {
+                                font-size: 10px;
+                            }
+                        }
+
+                        .remove-option {
+                            label {
+                                font-size: 10px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+    }
+}
+
+@media (max-width:breakpoints.$screen-xl-min) {
+    .software-package-details {
+        width: 95%;
+
+        .package-detail {
+            flex-wrap: nowrap;
+            gap: 40px !important;
+        }
+
+        .owner-details {
+            gap: 40px;
+        }
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-lg-min) {
+    .software-package-details {
+
+        .package-detail {
+            gap: 20px !important;
+            flex-wrap: wrap;
+        }
+
+
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-md-min) {
+    .software-package-details {
+        width: 130%;
+
+        .package-detail {
+            gap: 15px !important;
+            // width: 93%;
+        }
+
+        .owner-details {
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+
+        .title-sec {
+            span {
+                // padding-left: 173px;
+                font-size: 12px;
+            }
+        }
+
+        .user-list-container {
+            margin-right: 2rem;
+        }
+    }
+}

@@ -1,0 +1,137 @@
+@use '../scss/abstract/variables' as variables;
+@use '../scss/abstract/break_points'as breakpoints;
+
+.software-review-center {
+    background-color: white;
+    color: variables.$primary-color;
+    padding: 20px;
+    border-radius: 10px;
+    width: calc(100% - 231px); /* Automatically adjusts the width */
+    margin-left: 231px;
+
+    &.dark-mode {
+        background-color: black; /* Set to black for dark mode */
+        // color: #f5f5f5; /* Light text color */
+
+        .header{
+            color: white;
+            .sub-header{
+                p{
+                    color: white;
+
+                    strong{
+                        color: white;
+                    }
+                }
+            }
+        }
+
+        
+    }
+    .header {
+        text-align: center;
+        margin-bottom: 20px;
+        margin-top: 2rem;
+
+        h1 {
+            font-size: 20px;
+            text-align: justify;
+        }
+
+        .sub-header {
+            display: flex;
+            flex-direction: row;
+            gap: 8rem;
+            margin-top: -10px;
+            img {
+                width: 3rem;
+                object-fit: cover;
+                height: 3rem;
+            }
+            p {
+                font-size: 14px;
+                color: black;
+                font-weight: 700;
+                margin-top: -1px;
+                strong {
+                    font-weight: 500;
+                    color: variables.$default-colr;
+                }
+                input {
+                    width: 20px;
+                    height: 15px;
+                    background-color: initial;
+                }
+            }
+            .custom-checkbox {
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: blue; /* Changes the checkmark color to blue */
+            }
+
+            .custom-checkbox:checked {
+                border-color: blue;
+            }
+        }
+    }
+
+    .package-section {
+        display: flex;
+        margin-top: -10px;
+    }
+    .ticket-section {
+        display: flex;
+        flex-direction: row;
+        margin-top: -4rem;
+    }
+}
+
+@media only screen and (max-width:breakpoints.$screen-xl-min){
+   .software-review-center{
+    .package-section{
+        flex-direction: column;
+    }
+    .ticket-section{
+        flex-direction: column;
+    }
+   }
+
+}
+
+
+@media screen and (max-width:breakpoints.$screen-md-min) {
+    .software-review-center{
+        margin-left: 25px;
+        width: 68%;
+        .header{
+            h1{
+                font-size: 20px;
+                margin-bottom: 30px;
+                text-wrap: nowrap;
+            }
+            .sub-header{
+                gap: 1rem;
+                // margin-right: 5rem;
+                p{
+                    font-size: 15px;
+                }
+            }
+        }
+    }
+}
+
+@media screen and (max-width:breakpoints.$screen-sm){
+    .software-review-center{
+        .header{
+            h1{
+                font-size: 15px;
+            }
+            .sub-header{
+                p{
+                    font-size: 13px;
+                }
+            }
+        }
+    }
+}

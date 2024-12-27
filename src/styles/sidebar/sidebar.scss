@@ -1,0 +1,179 @@
+@use '../scss/abstract/variables' as variables;
+@use '../scss/abstract/break_points' as breakpoints;
+
+.sidebar {
+  width: 200px;
+  background-color: white; // Default background color
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Full viewport height */
+  border-right: 1px solid #eee;
+  padding: 20px 15px;
+  position: fixed; /* Fix sidebar to the left side */
+  transition: transform 0.3s ease; /* Smooth transition for sidebar toggle */
+  transform: translateX(0); /* Sidebar visible */
+
+  &.dark-mode {
+    background-color: #121212;
+    color: white !important;
+  
+    a.sidebar__item { 
+      color: white !important; /* Ensures text in <a> tags turns white */
+  
+      svg, i { 
+        color: white !important; /* Targets MUI Icons and custom icons */
+        fill: white !important;
+      }
+  
+      &:hover,
+      &--active {
+        background-color: variables.$btn-color;
+        color: white !important;
+  
+        svg, i {
+          color: white !important;
+          fill: white !important;
+        }
+      }
+    }
+  
+    .sidebar__footer {
+      .sidebar__item {
+        color: white !important;
+
+        &:hover {
+          background-color:variables.$btn-color; /* Use your button color variable */
+          color: white !important;
+        }
+      }
+
+      // Target logout specifically
+      .sidebar__item--logout {
+        color: #f44336 !important; /* Custom red for logout */
+        
+        &:hover {
+          background-color: #3b0d0d !important; /* Optional dark red hover */
+          color: white !important;
+        }
+      }
+    }
+  
+    &__greeting h4 {
+      color: #f5f5f5;
+    }
+  
+    &__divider {
+      border-top: 1px solid #333;
+    }
+  }
+  
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #333; /* Default text color */
+    font-size: 17px;
+    transition: all 0.3s;
+    text-decoration: none;
+
+    &:hover,
+    &--active {
+      background-color: #ea650d;
+      color: white !important;
+      border-radius: 30px;
+    }
+  }
+
+  &__icon {
+    font-size: 18px;
+  }
+
+
+  &__greeting {
+    position: relative;
+    h4 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #ea650d; // Default greeting text color
+      margin-top: -25px;
+      padding: 1px;
+    }
+  }
+
+  &__divider {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 15px 0;
+    margin-top: 0px;
+  }
+
+  &__menu {
+    flex: 1; /* Allow menu to grow within available space */
+    padding-right: 5px; /* Avoid scrollbar overlapping content */
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Add spacing between items */
+    max-height: calc(100vh - 160px); /* Subtract height for logo and footer */
+  }
+
+  &__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px 0; /* Optional: Add some padding for spacing */
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #333; /* Default text color */
+    font-size: 17px;
+    transition: all 0.3s;
+    text-decoration: none;
+
+    &:hover,
+    &--active {
+      background-color:variables.$btn-color;
+      color: white;
+      border-radius: 30px;
+      height: 20px;
+    }
+
+    &--logout {
+      color: #e91e63;
+      font-weight: bold;
+
+      &:hover {
+        background-color: #ffe8ed;
+      }
+    }
+  }
+
+  &__icon {
+    font-size: 18px;
+  }
+}
+
+@media screen and (max-width: breakpoints.$screen-md-min) {
+  .sidebar--closed {
+    display: none;
+  }
+
+  .sidebar {
+    &__greeting {
+      display: none;
+    }
+
+    &__divider {
+      display: none;
+    }
+  }
+}

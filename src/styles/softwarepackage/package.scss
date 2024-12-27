@@ -1,0 +1,280 @@
+@use '../../styles/scss/abstract/variables' as variables;
+@use '../../styles/scss/abstract/break_points' as breakpoints;
+
+.package-container {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  width: 50%;
+
+  &.dark-mode {
+    .left-title
+    {
+      h3{
+        color: white;
+      }
+    }
+    .software-package {
+      border: 2px solid white;
+      .package-item {
+        background-color: black;
+        color: white;
+
+        .package-number {
+          color: white;
+        }
+
+        .package-details {
+          .package-name {
+            color: white;
+          }
+          .details-row{
+            .review-date{
+              color: white;
+            }
+            .package-description{
+              color: white;
+            }
+          }
+          
+        }
+
+        &.selected {
+          background-color: currentColor;
+        
+            .package-number{
+              color: black;
+            }
+          .package-details{
+            .package-name{
+              color: black;
+            }
+            .details-row{
+              .review-date
+              {
+                color: black;
+              }
+              .package-description{
+                color: black;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+  .left-title {
+    position: relative;
+    margin-top: 20px;
+
+    h3 {
+      /* text-decoration: underline; */
+      position: absolute;
+      top: -51px;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: justify;
+      text-wrap: nowrap;
+    }
+  }
+
+  .software-package {
+    border-radius: 5px;
+    color: variables.$secondary-color;
+    border: 2px solid black;
+    width: 100%;
+    max-height: 380px;
+    overflow-y: auto;
+    margin-top: 15px;
+
+    &::-webkit-scrollbar {
+      height: 4px;
+      /* Slimmer horizontal scrollbar */
+      width: 4px;
+      /* Slimmer vertical scrollbar */
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #e0e0e0;
+      /* Light gray track for a clean appearance */
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #b0b0b0;
+      /* Gray thumb for a neutral, linear look */
+      border-radius: 0;
+      /* No rounded corners for a linear design */
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: #909090;
+      /* Slightly darker gray on hover */
+    }
+
+    /* Firefox styles */
+    scrollbar-width: thin;
+    /* Thinner scrollbar */
+    scrollbar-color: #b0b0b0 #e0e0e0;
+    /* Thumb and track colors */
+
+    .package-item {
+      padding: 6px;
+      border-bottom: 2px solid variables.$secondary-color;
+      border-radius: 5px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      text-align: justify;
+      gap: 30px;
+      background-color: white;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+
+      &.selected {
+        background-color: lightgray;
+        color: variables.$secondary-color;
+        border: 1px solid variables.$default-colr;
+        transform: translateY(-2px);
+        // box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+
+        button {
+          background-color:variables.$btn-color;
+          /* Light red when selected */
+        }
+      }
+
+      .package-number {
+        color:variables.$default-colr;
+        font-size: 15px;
+        font-weight: 500;
+        margin-left: 5px;
+      }
+
+      .package-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+
+        .package-name {
+          font-weight: bold;
+          color:variables.$default-colr;
+          margin-bottom: 5px;
+        }
+
+        .details-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
+
+          .review-date {
+            font-size: 13px;
+            color:variables.$default-colr;
+            white-space: nowrap;
+          }
+
+          .package-description {
+            font-size: 12px;
+            color:variables.$default-colr;
+
+          }
+        }
+      }
+
+      button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color:variables.$accent-color;
+        color: black;
+        border: none;
+        border-radius: 15px;
+        cursor: pointer;
+        height: 35px;
+        padding: 0 15px;
+        margin-top: 21px;
+
+        .go-to-cmdb {
+          color:variables.$default-colr;
+          text-decoration: none;
+          font-size: 10px;
+        }
+
+        // &:hover {
+        //   background-color: #1976d2;
+        // }
+      }
+    }
+
+    .package-item:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .add-package-btn {
+    background-color:variables.$accent-color;
+    color:variables.$default-colr;
+    border: none;
+    border-radius: 15px;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-top: 10px;
+
+    &:hover {
+      background-color: #f1c40f;
+    }
+  }
+}
+
+@media screen and (max-width: breakpoints.$screen-xl) {
+  .package-container {
+    .left-title{
+      margin-top: 15px;
+      h3{
+        font-size: 15px;
+      }
+    }
+    
+    .software-package {
+      max-height: 300px;
+      margin-top: 5px;
+
+      .package-item{
+        .package-details{
+
+          .package-name{
+            font-size: 12px;
+          }
+          .details-row{
+            .review-date{
+              font-size: 10px;
+            }
+            .package-description{
+              font-size: 10px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width:breakpoints.$screen-xl-min) {
+  .package-container {
+    width: 95%;
+  }
+}
+
+@media screen and (max-width:breakpoints.$screen-md-min) {
+  .package-container {
+    width: 130%;
+
+    .software-package {
+      margin-top: 10px;
+      width: 107%;
+      overflow-y: scroll;
+    }
+  }
+}

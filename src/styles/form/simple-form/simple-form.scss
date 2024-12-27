@@ -1,0 +1,145 @@
+.contact-form-container {
+  // width: 50%;
+  margin: 40px auto;
+  padding: 20px;
+  background: initial;
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  // background: linear-gradient(to right, blue, violet);
+
+  .error {
+    color: #ff4d6d;
+    font-size: 14px;
+    margin-top: 5px;
+  }
+
+  // background-color:#b5affe;
+
+  h1,
+  h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+
+  .sub-container {
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+
+        label {
+          font-weight: bold;
+          margin-bottom: 5px;
+          color: #fff;
+          text-align: justify;
+
+          span {
+            color: #ff4d6d;
+            /* Red asterisk */
+          }
+        }
+
+        input,
+        textarea,
+        select {
+          padding: 10px;
+          font-size: 16px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          background-color: whitesmoke;
+          color: black;
+        }
+
+
+
+        textarea {
+          resize: none;
+        }
+      }
+
+      .full-name {
+        .name-fields {
+          display: flex;
+          gap: 10px;
+
+          input {
+            flex: 1;
+          }
+        }
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+
+        .save-button {
+          padding: 10px 40px;
+          font-size: 18px;
+          font-weight: bold;
+          color: #fff;
+          background: #ff4d6d;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+
+          &:hover {
+            background-color: #ff1e42;
+          }
+        }
+
+        .cancel-button {
+          padding: 10px 40px;
+          font-size: 18px;
+          font-weight: bold;
+          color: #fff;
+          background: #808080;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+
+          &:hover {
+            background-color: #5a5a5a;
+          }
+        }
+      }
+    }
+
+    .submitted-data {
+      // margin-top: 30px;
+      width: 100%;
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+
+        th,
+        td {
+          border: 1px solid #fff;
+          padding: 10px;
+          text-align: left;
+        }
+
+        th {
+          background-color: #333;
+        }
+
+        tr:nth-child(even) {
+          background-color: #444;
+        }
+      }
+    }
+  }
+}
