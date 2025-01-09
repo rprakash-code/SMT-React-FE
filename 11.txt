@@ -1,29 +1,38 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+# Define variables
+$tenantId = "your-tenant-id"
+$clientId = "your-client-id"
+$clientSecret = "your-client-secret"
+$siteUrl = "contoso.sharepoint.com/sites/marketing" # Replace with your site URL
+$filePath = "Documents/Reports/2023/Sales.xlsx"     # Relative file path in the document library
+$outputFilePath = "C:\Temp\Sales.xlsx"             # Local file save location
 
-[ApiController]
-[Route("api/auth")]
-public class AuthController : ControllerBase
-{
-    [HttpGet("login")]
-    public IActionResult Login()
-    {
-        return Challenge(new AuthenticationProperties { RedirectUri = "/" }, OpenIdConnectDefaults.AuthenticationScheme);
-    }
+# Step 1: Get Access Token
+$tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" -Method Post -Body @{
+    grant_type = "client_credentials"
+    client_id = $clientId
+    client_secret = $clientSecret
+    scope = "https://graph.microsoft.com/.default"
+} -ContentType "application/x-www-form-urlencoded"
 
-    [HttpGet("logout")]
-    public async Task<IActionResult> Logout()
-    {
-        await HttpContext.SignOutAsync();
-        return Ok("Logged out");
-    }
+$accessToken = $tokenResponse.access_token
 
-    [HttpGet("profile")]
-    [Authorize]
-    public IActionResult Profile()
-    {
-        var claims = User.Claims.Select(c => new { c.Type, c.Value });
-        return Ok(claims);
-    }
-}
+# Step 2: Get the Site ID
+$siteResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/sites/$siteUrl" -Headers @{
+    Authorization = "Bearer $accessToken"
+} -Method Get
+
+$siteId = $siteResponse.id
+
+# Step 3: Get File Metadata
+$fileMetadataResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/sites/$siteId/drive/root:/$filePath" -Headers @{
+    Authorization = "Bearer $accessToken"
+} -Method Get
+
+$fileId = $fileMetadataResponse.id
+
+# Step 4: Download the File
+Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/sites/$siteId/drive/items/$fileId/content" -Headers @{
+    Authorization = "Bearer $accessToken"
+} -Method Get -OutFile $outputFilePath
+
+Write-Host "File downloaded successfully to $outputFilePath"
