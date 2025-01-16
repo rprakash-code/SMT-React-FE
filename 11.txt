@@ -2,17 +2,52 @@ import React, { useState, useEffect } from 'react';
 import '../../styles/softwarepackage/package.scss';
 
 interface SoftwarePackageProps {
-  packages: { name: string; lastReviewDate: string; lorem: string }[];
   selectedItem: string | null;
-  errors: { [key: string]: string }; // Accept errors as a prop
   handleSelectItem: (item: string) => void;
-  isDarkMode:boolean;
-  
+  isDarkMode: boolean;
 }
 
-const SoftwarePackage: React.FC<SoftwarePackageProps> = ({ packages, selectedItem, handleSelectItem, isDarkMode }) => {
+interface Package {
+  name: string;
+  lastReviewDate: string;
+  lorem: string;
+}
+
+const SoftwarePackage: React.FC<SoftwarePackageProps> = ({ selectedItem, handleSelectItem, isDarkMode }) => {
+  const [packages, setPackages] = useState<Package[]>([]); // State for packages
+  const [loading, setLoading] = useState<boolean>(true); // Loading state
+  const [error, setError] = useState<string | null>(null); // Error state
+
+  // Fetch packages from API
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const response = await fetch('/api/packages'); // Replace with your API endpoint
+        if (!response.ok) {
+          throw new Error('Failed to fetch packages');
+        }
+        const data: Package[] = await response.json();
+        setPackages(data);
+      } catch (err: any) {
+        setError(err.message || 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
+
+  if (loading) {
+    return <div className="loading">Loading packages...</div>;
+  }
+
+  if (error) {
+    return <div className="error">Error: {error}</div>;
+  }
+
   return (
-    <div className={isDarkMode?"package-container dark-mode" : "package-container"}>
+    <div className={isDarkMode ? 'package-container dark-mode' : 'package-container'}>
       <div className="left-title">
         <h3>Client Software Package</h3>
       </div>
