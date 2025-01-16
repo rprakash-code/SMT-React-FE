@@ -1,38 +1,47 @@
-# Define variables
-$tenantId = "your-tenant-id"
-$clientId = "your-client-id"
-$clientSecret = "your-client-secret"
-$siteUrl = "contoso.sharepoint.com/sites/marketing" # Replace with your site URL
-$filePath = "Documents/Reports/2023/Sales.xlsx"     # Relative file path in the document library
-$outputFilePath = "C:\Temp\Sales.xlsx"             # Local file save location
+import React, { useState, useEffect } from 'react';
+import '../../styles/softwarepackage/package.scss';
 
-# Step 1: Get Access Token
-$tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" -Method Post -Body @{
-    grant_type = "client_credentials"
-    client_id = $clientId
-    client_secret = $clientSecret
-    scope = "https://graph.microsoft.com/.default"
-} -ContentType "application/x-www-form-urlencoded"
+interface SoftwarePackageProps {
+  packages: { name: string; lastReviewDate: string; lorem: string }[];
+  selectedItem: string | null;
+  errors: { [key: string]: string }; // Accept errors as a prop
+  handleSelectItem: (item: string) => void;
+  isDarkMode:boolean;
+  
+}
 
-$accessToken = $tokenResponse.access_token
+const SoftwarePackage: React.FC<SoftwarePackageProps> = ({ packages, selectedItem, handleSelectItem, isDarkMode }) => {
+  return (
+    <div className={isDarkMode?"package-container dark-mode" : "package-container"}>
+      <div className="left-title">
+        <h3>Client Software Package</h3>
+      </div>
+      <div className="software-package">
+        {packages.map((pkg, index) => (
+          <div
+            key={index}
+            className={`package-item card ${selectedItem === pkg.name ? 'selected' : ''}`}
+            onClick={() => handleSelectItem(pkg.name)}
+            style={{
+              color: selectedItem === pkg.name ? 'white' : 'black',
+            }}
+          >
+            <span className="package-number">{index + 1}. </span>
+            <div className="package-details">
+              <span className="package-name">{pkg.name}</span>
+              <div className="details-row">
+                <span className="review-date">Last Review Date: {pkg.lastReviewDate}</span>
+                <span className="package-description">Lorem: {pkg.lorem}</span>
+              </div>
+            </div>
+            <button className="go-to-cmdb-btn">
+              <a href="#!" className="go-to-cmdb">Go to CMDB</a>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
-# Step 2: Get the Site ID
-$siteResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/sites/$siteUrl" -Headers @{
-    Authorization = "Bearer $accessToken"
-} -Method Get
-
-$siteId = $siteResponse.id
-
-# Step 3: Get File Metadata
-$fileMetadataResponse = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/sites/$siteId/drive/root:/$filePath" -Headers @{
-    Authorization = "Bearer $accessToken"
-} -Method Get
-
-$fileId = $fileMetadataResponse.id
-
-# Step 4: Download the File
-Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/sites/$siteId/drive/items/$fileId/content" -Headers @{
-    Authorization = "Bearer $accessToken"
-} -Method Get -OutFile $outputFilePath
-
-Write-Host "File downloaded successfully to $outputFilePath"
+export default SoftwarePackage;
