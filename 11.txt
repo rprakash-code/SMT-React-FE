@@ -1,107 +1,49 @@
 using System;
-using System.Collections.Generic;
-using System.DirectoryServices;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 
-public class ActiveDirectoryUser
+public class KeyVaultService
 {
-    public string Name { get; set; }
-    public string Mail { get; set; }
-    public string Description { get; set; }
-    public string Department { get; set; }
-    public string SamAccountName { get; set; }
-}
+    private readonly SecretClient _secretClient;
 
-public class ActiveDirectoryService
-{
-    private readonly string _ldapPath;
-    private readonly string _username;
-    private readonly string _password;
-
-    public ActiveDirectoryService(string ldapPath, string username, string password)
+    public KeyVaultService(string keyVaultUrl)
     {
-        _ldapPath = ldapPath;
-        _username = username;
-        _password = password;
+        // Use Managed Identity to authenticate
+        _secretClient = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
     }
 
-    public List<ActiveDirectoryUser> GetAllUsers()
-    {
-        var users = new List<ActiveDirectoryUser>();
-
-        try
-        {
-            using (var entry = new DirectoryEntry(_ldapPath, _username, _password))
-            {
-                using (var searcher = new DirectorySearcher(entry))
-                {
-                    searcher.Filter = "(&(objectClass=user)(objectCategory=person)(samAccountName=*))";
-                    searcher.SearchScope = SearchScope.Subtree;
-                    searcher.PropertiesToLoad.Add("name");
-                    searcher.PropertiesToLoad.Add("mail");
-                    searcher.PropertiesToLoad.Add("description");
-                    searcher.PropertiesToLoad.Add("department");
-                    searcher.PropertiesToLoad.Add("samAccountName");
-
-                    var results = searcher.FindAll();
-
-                    foreach (SearchResult result in results)
-                    {
-                        users.Add(new ActiveDirectoryUser
-                        {
-                            Name = result.Properties["name"].Count > 0 ? result.Properties["name"][0].ToString() : string.Empty,
-                            Mail = result.Properties["mail"].Count > 0 ? result.Properties["mail"][0].ToString() : string.Empty,
-                            Description = result.Properties["description"].Count > 0 ? result.Properties["description"][0].ToString() : string.Empty,
-                            Department = result.Properties["department"].Count > 0 ? result.Properties["department"][0].ToString() : string.Empty,
-                            SamAccountName = result.Properties["samAccountName"].Count > 0 ? result.Properties["samAccountName"][0].ToString() : string.Empty,
-                        });
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-
-        return users;
-    }
-}
-
-
-
-
-
-
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-
-[Route("api/[controller]")]
-[ApiController]
-public class ActiveDirectoryController : ControllerBase
-{
-    private readonly ActiveDirectoryService _adService;
-
-    public ActiveDirectoryController()
-    {
-        // Set these to match your environment
-        var ldapPath = "LDAP://OU=Users,OU=ILJ,DC=JP,DC=intranet";
-        var username = "your-username";
-        var password = "your-password";
-
-        _adService = new ActiveDirectoryService(ldapPath, username, password);
-    }
-
-    [HttpGet("users")]
-    public ActionResult<List<ActiveDirectoryUser>> GetAllUsers()
+    public string GetSecret(string secretName)
     {
         try
         {
-            var users = _adService.GetAllUsers();
-            return Ok(users);
+            // Retrieve the secret from Azure Key Vault
+            KeyVaultSecret secret = _secretClient.GetSecret(secretName);
+            return secret.Value;
         }
         catch (Exception ex)
         {
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            Console.WriteLine($"Error retrieving secret: {ex.Message}");
+            throw;
         }
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        // Replace with your Key Vault URL
+        string keyVaultUrl = "https://<your-key-vault-name>.vault.azure.net/";
+
+        // Replace with your secret name
+        string secretName = "MySecretName";
+
+        // Initialize the service
+        var keyVaultService = new KeyVaultService(keyVaultUrl);
+
+        // Get the secret value
+        string secretValue = keyVaultService.GetSecret(secretName);
+
+        Console.WriteLine($"Retrieved secret value: {secretValue}");
     }
 }
