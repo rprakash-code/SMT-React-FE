@@ -1,59 +1,5 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Threading.Tasks;
-
-public class AzureAuthService
-{
-    private readonly HttpClient _httpClient;
-    private readonly string _tenantId;
-    private readonly string _clientId;
-    private readonly string _clientSecret;
-    private readonly string _scope;
-
-    public AzureAuthService(string tenantId, string clientId, string clientSecret, string scope)
-    {
-        _httpClient = new HttpClient();
-        _tenantId = tenantId;
-        _clientId = clientId;
-        _clientSecret = clientSecret;
-        _scope = scope;
-    }
-
-    public async Task<string> GetAccessTokenAsync()
-    {
-        var tokenUrl = $"https://login.microsoftonline.com/{_tenantId}/oauth2/v2.0/token";
-
-        var formData = new FormUrlEncodedContent(new[]
-        {
-            new KeyValuePair<string, string>("grant_type", "client_credentials"),
-            new KeyValuePair<string, string>("client_id", _clientId),
-            new KeyValuePair<string, string>("client_secret", _clientSecret),
-            new KeyValuePair<string, string>("scope", _scope)
-        });
-
-        var response = await _httpClient.PostAsync(tokenUrl, formData);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync();
-        var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(json);
-
-        return tokenResponse?.AccessToken ?? throw new Exception("Failed to retrieve access token.");
-    }
-
-    private class TokenResponse
-    {
-        public string TokenType { get; set; }
-        public string ExpiresIn { get; set; }
-        public string ExtExpiresIn { get; set; }
-        public string AccessToken { get; set; }
-    }
-}
-
-
-
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -69,85 +15,63 @@ public class KeyVaultApiService
         _httpClient = new HttpClient();
     }
 
+    // Update Secret
     public async Task<string> UpdateSecretAsync(string vaultUrl, string secretName, string newSecretValue)
     {
         var accessToken = await _authService.GetAccessTokenAsync();
-
         var secretUrl = $"{vaultUrl}/secrets/{secretName}?api-version=7.2";
 
-        var payload = new
-        {
-            value = newSecretValue
-        };
-
+        var payload = new { value = newSecretValue };
         var requestContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Put, secretUrl);
-        request.Content = requestContent;
+        var request = new HttpRequestMessage(HttpMethod.Put, secretUrl)
+        {
+            Content = requestContent
+        };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
-        var responseBody = await response.Content.ReadAsStringAsync();
-        return responseBody;
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    // Create Secret
+    public async Task<string> CreateSecretAsync(string vaultUrl, string secretName, string secretValue)
+    {
+        var accessToken = await _authService.GetAccessTokenAsync();
+        var secretUrl = $"{vaultUrl}/secrets/{secretName}?api-version=7.2";
+
+        var payload = new { value = secretValue };
+        var requestContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Put, secretUrl)
+        {
+            Content = requestContent
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    // Get Secret
+    public async Task<string> GetSecretAsync(string vaultUrl, string secretName)
+    {
+        var accessToken = await _authService.GetAccessTokenAsync();
+        var secretUrl = $"{vaultUrl}/secrets/{secretName}?api-version=7.2";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, secretUrl);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync();
     }
 }
-
-
-
-
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Configuration values
-var tenantId = builder.Configuration["AzureAd:TenantId"];
-var clientId = builder.Configuration["AzureAd:ClientId"];
-var clientSecret = builder.Configuration["AzureAd:ClientSecret"];
-var scope = builder.Configuration["AzureAd:Scope"];
-var vaultUrl = builder.Configuration["KeyVault:Url"];
-
-builder.Services.AddSingleton(new AzureAuthService(tenantId, clientId, clientSecret, scope));
-builder.Services.AddTransient<KeyVaultApiService>();
-
-builder.Services.AddControllers();
-
-var app = builder.Build();
-
-app.MapControllers();
-
-app.Run();
-
-
-[Route("api/[controller]")]
-[ApiController]
-public class VaultController : ControllerBase
-{
-    private readonly KeyVaultApiService _keyVaultApiService;
-    private readonly string _vaultUrl;
-
-    public VaultController(KeyVaultApiService keyVaultApiService, IConfiguration configuration)
-    {
-        _keyVaultApiService = keyVaultApiService;
-        _vaultUrl = configuration["KeyVault:Url"];
-    }
-
-    [HttpPost("update-secret/{secretName}")]
-    public async Task<IActionResult> UpdateSecret(string secretName, [FromBody] string newSecretValue)
-    {
-        try
-        {
-            var result = await _keyVaultApiService.UpdateSecretAsync(_vaultUrl, secretName, newSecretValue);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error updating secret: {ex.Message}");
-        }
-    }
-}
-
 
 
 
