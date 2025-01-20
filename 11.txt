@@ -8,7 +8,7 @@ public class KeyVaultService
 
     public KeyVaultService(string keyVaultUrl)
     {
-        // Use Managed Identity to authenticate
+        // Authenticate using Managed Identity
         _secretClient = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
     }
 
@@ -28,22 +28,95 @@ public class KeyVaultService
     }
 }
 
-class Program
+
+
+
+Model/SecretModel.cs
+public class SecretModel
 {
-    static void Main(string[] args)
+    public string Name { get; set; }
+    public string Value { get; set; }
+}
+
+Controller/KeyVaultController.cs
+using Microsoft.AspNetCore.Mvc;
+using System;
+
+[Route("api/[controller]")]
+[ApiController]
+public class KeyVaultController : ControllerBase
+{
+    private readonly KeyVaultService _keyVaultService;
+
+    public KeyVaultController(KeyVaultService keyVaultService)
     {
-        // Replace with your Key Vault URL
-        string keyVaultUrl = "https://<your-key-vault-name>.vault.azure.net/";
+        _keyVaultService = keyVaultService;
+    }
 
-        // Replace with your secret name
-        string secretName = "MySecretName";
+    [HttpGet("secret/{secretName}")]
+    public ActionResult<SecretModel> GetSecret(string secretName)
+    {
+        try
+        {
+            var secretValue = _keyVaultService.GetSecret(secretName);
+            return Ok(new SecretModel { Name = secretName, Value = secretValue });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error retrieving secret: {ex.Message}");
+        }
+    }
+}
 
-        // Initialize the service
-        var keyVaultService = new KeyVaultService(keyVaultUrl);
 
-        // Get the secret value
-        string secretValue = keyVaultService.GetSecret(secretName);
+Program..cs
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddControllers();
 
-        Console.WriteLine($"Retrieved secret value: {secretValue}");
+        // Add KeyVaultService with the Key Vault URL
+        var keyVaultUrl = "https://<your-key-vault-name>.vault.azure.net/";
+        services.AddSingleton(new KeyVaultService(keyVaultUrl));
+    }
+
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+        }
+
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
+    }
+}
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add KeyVaultService
+var keyVaultUrl = "https://<your-key-vault-name>.vault.azure.net/";
+builder.Services.AddSingleton(new KeyVaultService(keyVaultUrl));
+
+// Add controllers
+builder.Services.AddControllers();
+
+var app = builder.Build();
+app.MapControllers();
+app.Run();
+
+
+var keyVaultUrl = builder.Configuration["KeyVault:Url"];
+builder.Services.AddSingleton(new KeyVaultService(keyVaultUrl));
+
+
+{
+    "KeyVault": {
+        "Url": "https://<your-key-vault-name>.vault.azure.net/"
     }
 }
