@@ -1,82 +1,89 @@
-import React, { useState, useEffect } from 'react';
-import '../../styles/softwarepackage/package.scss';
-
-interface SoftwarePackageProps {
-  selectedItem: string | null;
-  handleSelectItem: (item: string) => void;
-  isDarkMode: boolean;
+public class UserModel
+{
+    public string UserName { get; set; }
+    public string DisplayName { get; set; }
+    public string Email { get; set; }
 }
 
-interface Package {
-  name: string;
-  lastReviewDate: string;
-  lorem: string;
-}
 
-const SoftwarePackage: React.FC<SoftwarePackageProps> = ({ selectedItem, handleSelectItem, isDarkMode }) => {
-  const [packages, setPackages] = useState<Package[]>([]); // State for packages
-  const [loading, setLoading] = useState<boolean>(true); // Loading state
-  const [error, setError] = useState<string | null>(null); // Error state
+DAL/ActiveDirectoryService.cs
+using System.Collections.Generic;
+using System.DirectoryServices;
+using System.DirectoryServices.AccountManagement;
 
-  // Fetch packages from API
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const response = await fetch('/api/packages'); // Replace with your API endpoint
-        if (!response.ok) {
-          throw new Error('Failed to fetch packages');
+public class ActiveDirectoryService
+{
+    private readonly string _domain;
+    private readonly string _username;
+    private readonly string _password;
+
+    public ActiveDirectoryService(string domain, string username, string password)
+    {
+        _domain = domain;
+        _username = username;
+        _password = password;
+    }
+
+    public List<UserModel> GetAllUsers()
+    {
+        var users = new List<UserModel>();
+
+        using (var context = new PrincipalContext(ContextType.Domain, _domain, _username, _password))
+        {
+            using (var searcher = new PrincipalSearcher(new UserPrincipal(context)))
+            {
+                foreach (var result in searcher.FindAll())
+                {
+                    if (result is UserPrincipal userPrincipal)
+                    {
+                        users.Add(new UserModel
+                        {
+                            UserName = userPrincipal.SamAccountName,
+                            DisplayName = userPrincipal.DisplayName,
+                            Email = userPrincipal.EmailAddress
+                        });
+                    }
+                }
+            }
         }
-        const data: Package[] = await response.json();
-        setPackages(data);
-      } catch (err: any) {
-        setError(err.message || 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchPackages();
-  }, []);
+        return users;
+    }
+}
 
-  if (loading) {
-    return <div className="loading">Loading packages...</div>;
-  }
+controllers
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 
-  if (error) {
-    return <div className="error">Error: {error}</div>;
-  }
+[Route("api/[controller]")]
+[ApiController]
+public class ActiveDirectoryController : ControllerBase
+{
+    private readonly ActiveDirectoryService _adService;
 
-  return (
-    <div className={isDarkMode ? 'package-container dark-mode' : 'package-container'}>
-      <div className="left-title">
-        <h3>Client Software Package</h3>
-      </div>
-      <div className="software-package">
-        {packages.map((pkg, index) => (
-          <div
-            key={index}
-            className={`package-item card ${selectedItem === pkg.name ? 'selected' : ''}`}
-            onClick={() => handleSelectItem(pkg.name)}
-            style={{
-              color: selectedItem === pkg.name ? 'white' : 'black',
-            }}
-          >
-            <span className="package-number">{index + 1}. </span>
-            <div className="package-details">
-              <span className="package-name">{pkg.name}</span>
-              <div className="details-row">
-                <span className="review-date">Last Review Date: {pkg.lastReviewDate}</span>
-                <span className="package-description">Lorem: {pkg.lorem}</span>
-              </div>
-            </div>
-            <button className="go-to-cmdb-btn">
-              <a href="#!" className="go-to-cmdb">Go to CMDB</a>
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+    public ActiveDirectoryController(ActiveDirectoryService adService)
+    {
+        _adService = adService;
+    }
 
-export default SoftwarePackage;
+    [HttpGet("users")]
+    public ActionResult<List<UserModel>> GetAllUsers()
+    {
+        try
+        {
+            var users = _adService.GetAllUsers();
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
+}
+
+ // Inject ActiveDirectoryService with necessary credentials
+        services.AddSingleton(new ActiveDirectoryService(
+            domain: "yourdomain.com",
+            username: "yourADusername",
+            password: "yourADpassword"
+        ));
