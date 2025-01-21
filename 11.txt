@@ -305,4 +305,13 @@ public class VaultController : ControllerBase
 
 
 
-Retry failed after 4 tries. Retry settings can be adjusted in ClientOptions.Retry or by configuring a custom retry policy in ClientOptions.RetryPolicy. (The SSL connection could not be established, see inner exception.) (The SSL connection could not be established, see inner exception.)
+var handler = new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true
+};
+
+var options = new SecretClientOptions
+{
+    Transport = new HttpClientTransport(handler)
+};
+
