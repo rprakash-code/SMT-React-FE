@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 
 public class ActiveDirectoryUserService
@@ -12,59 +13,58 @@ public class ActiveDirectoryUserService
         _connectionString = connectionString;
     }
 
-    // Insert multiple users into the database
-    public async Task InsertUsersAsync(List<ActiveDirectoryUser> users)
+    // Fetch users matching the search query
+    public async Task<List<ActiveDirectoryUserDto>> GetUsersAsync(string searchQuery)
     {
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
+        var users = new List<ActiveDirectoryUserDto>();
 
-            foreach (var user in users)
+        try
+        {
+            using (var connection = new SqlConnection(_connectionString))
             {
-                var query = @"INSERT INTO ActiveDirectoryUsers (Name, Mail, Description, Department, SamAccountName) 
-                              VALUES (@Name, @Mail, @Description, @Department, @SamAccountName)";
+                await connection.OpenAsync();
+
+                var query = @"
+                    SELECT Name, Mail 
+                    FROM ActiveDirectoryUsers
+                    WHERE Name LIKE @SearchQuery OR Mail LIKE @SearchQuery";
+
                 using (var command = new SqlCommand(query, connection))
                 {
-                    command.Parameters.AddWithValue("@Name", user.Name);
-                    command.Parameters.AddWithValue("@Mail", (object)user.Mail ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@Description", (object)user.Description ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@Department", (object)user.Department ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@SamAccountName", user.SamAccountName);
+                    command.Parameters.AddWithValue("@SearchQuery", $"%{searchQuery}%");
 
-                    await command.ExecuteNonQueryAsync();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            users.Add(new ActiveDirectoryUserDto
+                            {
+                                Name = reader["Name"].ToString(),
+                                Mail = reader["Mail"].ToString()
+                            });
+                        }
+                    }
                 }
             }
         }
-    }
-
-    // Delete a user by SamAccountName
-    public async Task DeleteUserAsync(string samAccountName)
-    {
-        using (var connection = new SqlConnection(_connectionString))
+        catch (Exception ex)
         {
-            await connection.OpenAsync();
-
-            var query = "DELETE FROM ActiveDirectoryUsers WHERE SamAccountName = @SamAccountName";
-            using (var command = new SqlCommand(query, connection))
-            {
-                command.Parameters.AddWithValue("@SamAccountName", samAccountName);
-                await command.ExecuteNonQueryAsync();
-            }
+            Console.WriteLine($"Error fetching users: {ex.Message}");
+            throw;
         }
+
+        return users;
     }
 }
 
-
-
-
-public class ActiveDirectoryUser
+// Data Transfer Object (DTO) for returning user data
+public class ActiveDirectoryUserDto
 {
     public string Name { get; set; }
     public string Mail { get; set; }
-    public string Description { get; set; }
-    public string Department { get; set; }
-    public string SamAccountName { get; set; }
 }
+
+
 
 
 
@@ -80,61 +80,34 @@ using System.Threading.Tasks;
 public class ActiveDirectoryController : ControllerBase
 {
     private readonly ActiveDirectoryUserService _userService;
-    private readonly ActiveDirectoryService _adService;
 
-    public ActiveDirectoryController(ActiveDirectoryUserService userService, ActiveDirectoryService adService)
+    public ActiveDirectoryController(ActiveDirectoryUserService userService)
     {
         _userService = userService;
-        _adService = adService;
     }
 
-    // Endpoint to fetch users from Active Directory and save to the database
-    [HttpPost("sync-users")]
-    public async Task<IActionResult> SyncUsers()
+    // Endpoint for autocomplete
+    [HttpGet("autocomplete")]
+    public async Task<IActionResult> GetAutocompleteSuggestions([FromQuery] string query)
     {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest(new { Message = "Query parameter is required." });
+        }
+
         try
         {
-            var users = _adService.GetAllUsers();
-            await _userService.InsertUsersAsync(users);
-            return Ok(new { Message = "Users synchronized successfully.", Count = users.Count });
+            var users = await _userService.GetUsersAsync(query);
+            if (users == null || users.Count == 0)
+            {
+                return NotFound(new { Message = "No users found matching the query." });
+            }
+
+            return Ok(users);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, $"Error syncing users: {ex.Message}");
-        }
-    }
-
-    // Endpoint to delete a user from the database by SamAccountName
-    [HttpDelete("delete-user/{samAccountName}")]
-    public async Task<IActionResult> DeleteUser(string samAccountName)
-    {
-        try
-        {
-            await _userService.DeleteUserAsync(samAccountName);
-            return Ok(new { Message = $"User {samAccountName} deleted successfully." });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error deleting user: {ex.Message}");
+            return StatusCode(500, $"Error fetching autocomplete suggestions: {ex.Message}");
         }
     }
 }
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Azure SQL connection string
-var connectionString = builder.Configuration.GetConnectionString("AzureSql");
-
-// Register services
-builder.Services.AddSingleton(new ActiveDirectoryUserService(connectionString));
-builder.Services.AddSingleton(new ActiveDirectoryService("serverName", "ldapBasePath", "username", "password"));
-
-// Add controllers
-builder.Services.AddControllers();
-
-var app = builder.Build();
-
-app.MapControllers();
-
-app.Run();
