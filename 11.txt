@@ -1,317 +1,84 @@
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-
-public class KeyVaultApiService
-{
-    private readonly HttpClient _httpClient;
-    private readonly AzureAuthService _authService;
-
-    public KeyVaultApiService(AzureAuthService authService)
-    {
-        _authService = authService;
-        _httpClient = new HttpClient();
-    }
-
-    // Update Secret
-    public async Task<string> UpdateSecretAsync(string vaultUrl, string secretName, string newSecretValue)
-    {
-        var accessToken = await _authService.GetAccessTokenAsync();
-
-        var secretUrl = $"{vaultUrl}/secrets/{secretName}?api-version=7.2";
-
-        var payload = new
-        {
-            value = newSecretValue
-        };
-
-        var requestContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Put, secretUrl);
-        request.Content = requestContent;
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-        return responseBody;
-    }
-
-    // Get Secret
-    public async Task<string> GetSecretAsync(string vaultUrl, string secretName)
-    {
-        var accessToken = await _authService.GetAccessTokenAsync();
-
-        var secretUrl = $"{vaultUrl}/secrets/{secretName}?api-version=7.2";
-
-        var request = new HttpRequestMessage(HttpMethod.Get, secretUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-        return responseBody;
-    }
-
-    // Create Secret
-    public async Task<string> CreateSecretAsync(string vaultUrl, string secretName, string secretValue)
-    {
-        var accessToken = await _authService.GetAccessTokenAsync();
-
-        var secretUrl = $"{vaultUrl}/secrets/{secretName}?api-version=7.2";
-
-        var payload = new
-        {
-            value = secretValue
-        };
-
-        var requestContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Put, secretUrl);
-        request.Content = requestContent;
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-        return responseBody;
-    }
-}
+CREATE TABLE ActiveDirectoryUsers (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(255) NOT NULL,
+    Mail NVARCHAR(255),
+    Description NVARCHAR(255),
+    Department NVARCHAR(255),
+    SamAccountName NVARCHAR(255) NOT NULL
+);
 
 
 
-controller
-
-
-[Route("api/[controller]")]
-[ApiController]
-public class VaultController : ControllerBase
-{
-    private readonly KeyVaultApiService _keyVaultApiService;
-    private readonly string _vaultUrl;
-
-    public VaultController(KeyVaultApiService keyVaultApiService, IConfiguration configuration)
-    {
-        _keyVaultApiService = keyVaultApiService;
-        _vaultUrl = configuration["KeyVault:Url"];
-    }
-
-    [HttpGet("get-secret/{secretName}")]
-    public async Task<IActionResult> GetSecret(string secretName)
-    {
-        try
-        {
-            var result = await _keyVaultApiService.GetSecretAsync(_vaultUrl, secretName);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error retrieving secret: {ex.Message}");
-        }
-    }
-
-    [HttpPost("create-secret/{secretName}")]
-    public async Task<IActionResult> CreateSecret(string secretName, [FromBody] string secretValue)
-    {
-        try
-        {
-            var result = await _keyVaultApiService.CreateSecretAsync(_vaultUrl, secretName, secretValue);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error creating secret: {ex.Message}");
-        }
-    }
-
-    [HttpPut("update-secret/{secretName}")]
-    public async Task<IActionResult> UpdateSecret(string secretName, [FromBody] string newSecretValue)
-    {
-        try
-        {
-            var result = await _keyVaultApiService.UpdateSecretAsync(_vaultUrl, secretName, newSecretValue);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error updating secret: {ex.Message}");
-        }
-    }
-}
-
-
-{
-  "value": "MySecretValue",
-  "id": "https://<your-vault-name>.vault.azure.net/secrets/MySecretName/abcdef123456"
-}
-
-
-
-{
-  "value": "MyNewSecretValue",
-  "id": "https://<your-vault-name>.vault.azure.net/secrets/MySecretName/abcdef123456"
-}
-
-
-
-{
-  "value": "MyUpdatedSecretValue",
-  "id": "https://<your-vault-name>.vault.azure.net/secrets/MySecretName/abcdef123456"
-}
-
-
-
-
-
-kevault service
 using System;
-using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Data.SqlClient;
 
-public class KeyVaultService
+public class ActiveDirectoryRepository
 {
-    private readonly SecretClient _secretClient;
+    private readonly string _connectionString;
 
-    public KeyVaultService(string vaultUrl, string clientId, string clientSecret, string tenantId)
+    public ActiveDirectoryRepository(string connectionString)
     {
-        // Authenticate using ClientSecretCredential
-        var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-
-        // Initialize the SecretClient with the Vault URL and credential
-        _secretClient = new SecretClient(new Uri(vaultUrl), credential);
+        _connectionString = connectionString;
     }
 
-    // Retrieve a secret
-    public async Task<string> GetSecretAsync(string secretName)
+    public void InsertUsers(List<ActiveDirectoryUser> users)
     {
-        try
+        using (var connection = new SqlConnection(_connectionString))
         {
-            KeyVaultSecret secret = await _secretClient.GetSecretAsync(secretName);
-            return secret.Value;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error retrieving secret: {ex.Message}");
-            throw;
+            connection.Open();
+
+            foreach (var user in users)
+            {
+                var query = @"INSERT INTO ActiveDirectoryUsers (Name, Mail, Description, Department, SamAccountName) 
+                              VALUES (@Name, @Mail, @Description, @Department, @SamAccountName)";
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Name", user.Name);
+                    command.Parameters.AddWithValue("@Mail", (object)user.Mail ?? DBNull.Value);
+                    command.Parameters.AddWithValue("@Description", (object)user.Description ?? DBNull.Value);
+                    command.Parameters.AddWithValue("@Department", (object)user.Department ?? DBNull.Value);
+                    command.Parameters.AddWithValue("@SamAccountName", user.SamAccountName);
+
+                    command.ExecuteNonQuery();
+                }
+            }
         }
     }
+}
 
-    // Create or update a secret
-    public async Task<string> CreateOrUpdateSecretAsync(string secretName, string secretValue)
+var connectionString = "Your Azure SQL Connection String";
+var repository = new ActiveDirectoryRepository(connectionString);
+
+var activeDirectoryService = new ActiveDirectoryService("serverName", "ldapBasePath", "username", "password");
+var users = activeDirectoryService.GetAllUsers();
+
+repository.InsertUsers(users);
+
+Console.WriteLine("Data inserted successfully.");
+
+
+
+
+
+public void DeleteUser(string samAccountName)
+{
+    using (var connection = new SqlConnection(_connectionString))
     {
-        try
+        connection.Open();
+
+        var query = "DELETE FROM ActiveDirectoryUsers WHERE SamAccountName = @SamAccountName";
+        using (var command = new SqlCommand(query, connection))
         {
-            KeyVaultSecret secret = await _secretClient.SetSecretAsync(secretName, secretValue);
-            return secret.Value;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error creating or updating secret: {ex.Message}");
-            throw;
+            command.Parameters.AddWithValue("@SamAccountName", samAccountName);
+            command.ExecuteNonQuery();
         }
     }
 }
 
 
 
+repository.DeleteUser("jdoe");
+Console.WriteLine("User deleted successfully.");
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Load Azure Key Vault configuration values
-var vaultUrl = builder.Configuration["KeyVault:Url"];
-var clientId = builder.Configuration["AzureAd:ClientId"];
-var clientSecret = builder.Configuration["AzureAd:ClientSecret"];
-var tenantId = builder.Configuration["AzureAd:TenantId"];
-
-// Register KeyVaultService
-builder.Services.AddSingleton(new KeyVaultService(vaultUrl, clientId, clientSecret, tenantId));
-
-// Add controllers
-builder.Services.AddControllers();
-
-var app = builder.Build();
-app.MapControllers();
-app.Run();
-
-
-
-
-
-
-
-
-[Route("api/[controller]")]
-[ApiController]
-public class VaultController : ControllerBase
-{
-    private readonly KeyVaultService _keyVaultService;
-
-    public VaultController(KeyVaultService keyVaultService)
-    {
-        _keyVaultService = keyVaultService;
-    }
-
-    [HttpGet("get-secret/{secretName}")]
-    public async Task<IActionResult> GetSecret(string secretName)
-    {
-        try
-        {
-            var secret = await _keyVaultService.GetSecretAsync(secretName);
-            return Ok(new { Name = secretName, Value = secret });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error retrieving secret: {ex.Message}");
-        }
-    }
-
-    [HttpPost("create-secret/{secretName}")]
-    public async Task<IActionResult> CreateOrUpdateSecret(string secretName, [FromBody] string secretValue)
-    {
-        try
-        {
-            var secret = await _keyVaultService.CreateOrUpdateSecretAsync(secretName, secretValue);
-            return Ok(new { Name = secretName, Value = secret });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error creating/updating secret: {ex.Message}");
-        }
-    }
-}
-
-
-
-
-
-
-
-{
-  "AzureAd": {
-    "ClientId": "your-client-id",
-    "ClientSecret": "your-client-secret",
-    "TenantId": "your-tenant-id"
-  },
-  "KeyVault": {
-    "Url": "https://<your-key-vault-name>.vault.azure.net/"
-  }
-}
-
-
-
-var handler = new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true
-};
-
-var options = new SecretClientOptions
-{
-    Transport = new HttpClientTransport(handler)
-};
 
