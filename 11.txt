@@ -1,32 +1,23 @@
-CREATE TABLE ActiveDirectoryUsers (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    Name NVARCHAR(255) NOT NULL,
-    Mail NVARCHAR(255),
-    Description NVARCHAR(255),
-    Department NVARCHAR(255),
-    SamAccountName NVARCHAR(255) NOT NULL
-);
-
-
-
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Threading.Tasks;
 
-public class ActiveDirectoryRepository
+public class ActiveDirectoryUserService
 {
     private readonly string _connectionString;
 
-    public ActiveDirectoryRepository(string connectionString)
+    public ActiveDirectoryUserService(string connectionString)
     {
         _connectionString = connectionString;
     }
 
-    public void InsertUsers(List<ActiveDirectoryUser> users)
+    // Insert multiple users into the database
+    public async Task InsertUsersAsync(List<ActiveDirectoryUser> users)
     {
         using (var connection = new SqlConnection(_connectionString))
         {
-            connection.Open();
+            await connection.OpenAsync();
 
             foreach (var user in users)
             {
@@ -40,45 +31,110 @@ public class ActiveDirectoryRepository
                     command.Parameters.AddWithValue("@Department", (object)user.Department ?? DBNull.Value);
                     command.Parameters.AddWithValue("@SamAccountName", user.SamAccountName);
 
-                    command.ExecuteNonQuery();
+                    await command.ExecuteNonQueryAsync();
                 }
+            }
+        }
+    }
+
+    // Delete a user by SamAccountName
+    public async Task DeleteUserAsync(string samAccountName)
+    {
+        using (var connection = new SqlConnection(_connectionString))
+        {
+            await connection.OpenAsync();
+
+            var query = "DELETE FROM ActiveDirectoryUsers WHERE SamAccountName = @SamAccountName";
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@SamAccountName", samAccountName);
+                await command.ExecuteNonQueryAsync();
             }
         }
     }
 }
 
-var connectionString = "Your Azure SQL Connection String";
-var repository = new ActiveDirectoryRepository(connectionString);
-
-var activeDirectoryService = new ActiveDirectoryService("serverName", "ldapBasePath", "username", "password");
-var users = activeDirectoryService.GetAllUsers();
-
-repository.InsertUsers(users);
-
-Console.WriteLine("Data inserted successfully.");
 
 
 
-
-
-public void DeleteUser(string samAccountName)
+public class ActiveDirectoryUser
 {
-    using (var connection = new SqlConnection(_connectionString))
-    {
-        connection.Open();
+    public string Name { get; set; }
+    public string Mail { get; set; }
+    public string Description { get; set; }
+    public string Department { get; set; }
+    public string SamAccountName { get; set; }
+}
 
-        var query = "DELETE FROM ActiveDirectoryUsers WHERE SamAccountName = @SamAccountName";
-        using (var command = new SqlCommand(query, connection))
+
+
+
+
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+[Route("api/[controller]")]
+[ApiController]
+public class ActiveDirectoryController : ControllerBase
+{
+    private readonly ActiveDirectoryUserService _userService;
+    private readonly ActiveDirectoryService _adService;
+
+    public ActiveDirectoryController(ActiveDirectoryUserService userService, ActiveDirectoryService adService)
+    {
+        _userService = userService;
+        _adService = adService;
+    }
+
+    // Endpoint to fetch users from Active Directory and save to the database
+    [HttpPost("sync-users")]
+    public async Task<IActionResult> SyncUsers()
+    {
+        try
         {
-            command.Parameters.AddWithValue("@SamAccountName", samAccountName);
-            command.ExecuteNonQuery();
+            var users = _adService.GetAllUsers();
+            await _userService.InsertUsersAsync(users);
+            return Ok(new { Message = "Users synchronized successfully.", Count = users.Count });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error syncing users: {ex.Message}");
+        }
+    }
+
+    // Endpoint to delete a user from the database by SamAccountName
+    [HttpDelete("delete-user/{samAccountName}")]
+    public async Task<IActionResult> DeleteUser(string samAccountName)
+    {
+        try
+        {
+            await _userService.DeleteUserAsync(samAccountName);
+            return Ok(new { Message = $"User {samAccountName} deleted successfully." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error deleting user: {ex.Message}");
         }
     }
 }
 
 
+var builder = WebApplication.CreateBuilder(args);
 
-repository.DeleteUser("jdoe");
-Console.WriteLine("User deleted successfully.");
+// Azure SQL connection string
+var connectionString = builder.Configuration.GetConnectionString("AzureSql");
 
+// Register services
+builder.Services.AddSingleton(new ActiveDirectoryUserService(connectionString));
+builder.Services.AddSingleton(new ActiveDirectoryService("serverName", "ldapBasePath", "username", "password"));
 
+// Add controllers
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
