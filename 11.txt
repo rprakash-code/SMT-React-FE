@@ -77,3 +77,101 @@ var response = await client.PostAsync("https://nndev1.service-now.com/api/nn/nn_
 
 response.EnsureSuccessStatusCode();
 Console.WriteLine(await response.Content.ReadAsStringAsync());
+
+
+
+public class ApiService
+{
+    private readonly HttpClient _httpClient;
+
+    public ApiService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<string> CreateRequestAsync(object requestData, string username, string password)
+    {
+        // Serialize the request data
+        string requestBody = JsonConvert.SerializeObject(requestData);
+
+        // Create the HTTP request
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://nndev1.service-now.com/api/nn/nn_request_api/createRequest");
+
+        // Add Basic Authentication header
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
+        request.Headers.Add("Authorization", $"Basic {credentials}");
+
+        // Add JSON content
+        request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+
+        // Send the request and handle the response
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync();
+    }
+}
+
+
+[ApiController]
+[Route("api/[controller]")]
+public class RequestController : ControllerBase
+{
+    private readonly ApiService _apiService;
+
+    public RequestController(ApiService apiService)
+    {
+        _apiService = apiService;
+    }
+
+    [HttpPost("create")]
+    public async Task<IActionResult> CreateRequest([FromBody] object requestData, [FromQuery] string username, [FromQuery] string password)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                return BadRequest(new { message = "Username and password are required for authentication." });
+            }
+
+            // Call the service to send the API request
+            var response = await _apiService.CreateRequestAsync(requestData, username, password);
+
+            // Return the response
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred while creating the request.", error = ex.Message });
+        }
+    }
+}
+
+
+
+
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddHttpClient<ApiService>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline
+app.MapControllers();
+
+app.Run();
+
+
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddControllers();
+    services.AddHttpClient<ApiService>();
+}
+
+
+
