@@ -1,9 +1,79 @@
+var requestData = new
+{
+    item_id = "07f44181dbf063806adb54904b96197d",
+    sysparm_quantity = "1",
+    variables = new
+    {
+        jap_this_application_is_only_valid = "",
+        jap_please_select_usage_duration_permanent_temporary = "",
+        jap_if_you_select_permanent = "",
+        jap_if_you_temporary_start_date = "",
+        jap_if_you_temporary_end_date = "",
+        jap_create_new_security_group = "",
+        jap_outsourcer_idrequestsecurity = "",
+        jap_grantaddordelete_idrequestsecurity = "",
+        jap_securitygroupname_idrequestsecurity = "",
+        jap_the_security_group_name_varies = "",
+        jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name = "",
+        jap_please_select_the_4th_to_6th_characters_of_the_security_group_name = "",
+        jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name_high_priv = "",
+        please_select_the_4th_to_6th_characters_of_the_security_group_name_high_priv = "",
+        jap_please_enter_the_desired_security_group_name_from_now_on = "",
+        jap_please_specify_the_owner_of_the_newly_created_security_group = "",
+        jap_name_identity_now = "",
+        jap_name_description_identity_now = "",
+        jap_security_group_deletion = "",
+        jap_deletion_target_security_group_name = "",
+        jap_security_group_member_modification = "true",
+        jap_target_security_group_name = "testing group 1",
+        please_fill_in_a_member_name_1 = new
+        {
+            table = "sys_user",
+            value = "",
+            field = "user_name"
+        },
+        jap_select_add_or_remove_member = "add_member",
+        please_fill_in_a_member_name_2 = new
+        {
+            table = "sys_user",
+            value = "",
+            field = "user_name"
+        },
+        jap_select_add_or_remove_member2 = "remove_member",
+        please_fill_in_a_member_name_3 = "",
+        jap_select_add_or_remove_member3 = "add_member",
+        jap_security_group_owner_modification = "true",
+        jap_target_security_group_name2 = "testing group 1",
+        jap_please_fill_in_a_new_onwer_name2 = new
+        {
+            table = "sys_user",
+            value = "",
+            field = "user_name"
+        },
+        jap_register_existing_security_groups_to_identitynow = "",
+        jap_target_security_group_name_existing = "",
+        jap_application_role_name = "",
+        jap_description_application_role = "",
+        jap_unregister_security_group = "",
+        jap_target_identity_now_role_name = "",
+        jap_target_security_group_name_unreg = "",
+        jap_reason_for_the_request_additional_information_for_the_request_etc = ""
+    },
+    get_portal_messages = "true",
+    sysparm_no_validation = "true"
+};
+
+
+
+
+string requestBody = JsonConvert.SerializeObject(requestData);
+
+
+
+var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+
 var client = new HttpClient();
-var request = new HttpRequestMessage(HttpMethod.Post, "https://nndev1.service-now.com/api/nn/nn_request_api/createRequest");
-request.Headers.Add("Authorization", "Basic bm5fc2NfYXBpX2pwX2F1dG9tYXRpb246QzM0NTlZNzkyNmI3RzFkVGhKMkExV0MyIVU1S0Q2WkY0MTFm");
-request.Headers.Add("Cookie", "BIGipServerpool_nndev1=16695889c70ed9d922533c1379eeeb86; JSESSIONID=44EA44B3AE0A69261F83DF3FABFAF06E; glide_node_id_for_js=c048b693c240168786b84f012b7ca1cc075b9e0bdb4835972a689af78504c0cc; glide_session_store=8D7F25453353DAD419F21A7BFD5C7B7B; glide_user_activity=U0N2M18xOm9XU09sdHBZanZhbThBOFZxSHg0VTl6Vmw5Nk5xSE96eFFmQUdaSXlFRHc9OlNQbnQyaGR0NU92dWttcUJoUG1ONTVwcFIvQ1RRbkVvTEczR3VtMWxVemc9; glide_user_route=glide.d0f37a2b3d4ebdf8ca1194c7f5f0a394");
-var content = new StringContent("{\r\n    \"item_id\": \"07f44181dbf063806adb54904b96197d\",\r\n    \"sysparm_quantity\": \"1\",\r\n    \"variables\": {\r\n        \"jap_this_application_is_only_valid\": \"\",\r\n        \"jap_please_select_usage_duration_permanent_temporary\": \"\",\r\n        \"jap_if_you_select_permanent\": \"\",\r\n        \"jap_if_you_temporary_start_date\": \"\",\r\n        \"jap_if_you_temporary_end_date\": \"\",\r\n        \"jap_create_new_security_group\": \"\",\r\n        \"jap_outsourcer_idrequestsecurity\": \"\",\r\n        \"jap_grantaddordelete_idrequestsecurity\": \"\",\r\n        \"jap_securitygroupname_idrequestsecurity\": \"\",\r\n        \"jap_the_security_group_name_varies\": \"\",\r\n        \"jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name\": \"\",\r\n        \"jap_please_select_the_4th_to_6th_characters_of_the_security_group_name\": \"\",\r\n        \"jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name_high_priv\": \"\",\r\n        \"please_select_the_4th_to_6th_characters_of_the_security_group_name_high_priv\": \"\",\r\n        \"jap_please_enter_the_desired_security_group_name_from_now_on\": \"\",\r\n        \"jap_please_specify_the_owner_of_the_newly_created_security_group\": \"\",\r\n        \"jap_name_identity_now\": \"\",\r\n        \"jap_name_description_identity_now\": \"\",\r\n        \"jap_security_group_deletion\": \"\",\r\n        \"jap_deletion_target_security_group_name\": \"\",\r\n        \"jap_security_group_member_modification\": \"true\",\r\n        \"jap_target_security_group_name\": \"testing group 1\",\r\n        \"please_fill_in_a_member_name_1\": {\"table\": \"sys_user\",\"value\": \"\",\"field\": \"user_name\"},\r\n        \"jap_select_add_or_remove_member\": \"add_member\",\r\n        \"please_fill_in_a_member_name_2\": {\"table\": \"sys_user\",\"value\": \"\",\"field\": \"user_name\"},\r\n        \"jap_select_add_or_remove_member2\": \"remove_member\",\r\n        \"please_fill_in_a_member_name_3\": \"\",\r\n        \"jap_select_add_or_remove_member3\": \"add_member\",\r\n        \"jap_security_group_owner_modification\": \"true\",\r\n        \"jap_target_security_group_name2\": \"testing group 1\",\r\n        \"jap_please_fill_in_a_new_onwer_name2\": {\"table\": \"sys_user\",\"value\": \"\",\"field\": \"user_name\"},\r\n        \"jap_register_existing_security_groups_to_identitynow\": \"\",\r\n        \"jap_target_security_group_name_existing\": \"\",\r\n        \"jap_application_role_name\": \"\",\r\n        \"jap_description_application_role\": \"\",\r\n        \"jap_unregister_security_group\": \"\",\r\n        \"jap_target_identity_now_role_name\": \"\",\r\n        \"jap_target_security_group_name_unreg\": \"\",\r\n        \"jap_reason_for_the_request_additional_information_for_the_request_etc\": \"\"\r\n    },\r\n    \"get_portal_messages\": \"true\",\r\n    \"sysparm_no_validation\": \"true\"\r\n}", null, "application/json");
-request.Content = content;
-var response = await client.SendAsync(request);
+var response = await client.PostAsync("https://nndev1.service-now.com/api/nn/nn_request_api/createRequest", content);
+
 response.EnsureSuccessStatusCode();
 Console.WriteLine(await response.Content.ReadAsStringAsync());
