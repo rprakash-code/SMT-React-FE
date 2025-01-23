@@ -1,113 +1,105 @@
-using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Threading.Tasks;
-
-public class ActiveDirectoryUserService
+var options = new RestClientOptions("")
 {
-    private readonly string _connectionString;
-
-    public ActiveDirectoryUserService(string connectionString)
-    {
-        _connectionString = connectionString;
-    }
-
-    // Fetch users matching the search query
-    public async Task<List<ActiveDirectoryUserDto>> GetUsersAsync(string searchQuery)
-    {
-        var users = new List<ActiveDirectoryUserDto>();
-
-        try
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
-
-                var query = @"
-                    SELECT Name, Mail 
-                    FROM ActiveDirectoryUsers
-                    WHERE Name LIKE @SearchQuery OR Mail LIKE @SearchQuery";
-
-                using (var command = new SqlCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@SearchQuery", $"%{searchQuery}%");
-
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            users.Add(new ActiveDirectoryUserDto
-                            {
-                                Name = reader["Name"].ToString(),
-                                Mail = reader["Mail"].ToString()
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error fetching users: {ex.Message}");
-            throw;
-        }
-
-        return users;
-    }
-}
-
-// Data Transfer Object (DTO) for returning user data
-public class ActiveDirectoryUserDto
-{
-    public string Name { get; set; }
-    public string Mail { get; set; }
-}
-
-
-
-
-
-
-
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-[Route("api/[controller]")]
-[ApiController]
-public class ActiveDirectoryController : ControllerBase
-{
-    private readonly ActiveDirectoryUserService _userService;
-
-    public ActiveDirectoryController(ActiveDirectoryUserService userService)
-    {
-        _userService = userService;
-    }
-
-    // Endpoint for autocomplete
-    [HttpGet("autocomplete")]
-    public async Task<IActionResult> GetAutocompleteSuggestions([FromQuery] string query)
-    {
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return BadRequest(new { Message = "Query parameter is required." });
-        }
-
-        try
-        {
-            var users = await _userService.GetUsersAsync(query);
-            if (users == null || users.Count == 0)
-            {
-                return NotFound(new { Message = "No users found matching the query." });
-            }
-
-            return Ok(users);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error fetching autocomplete suggestions: {ex.Message}");
-        }
-    }
-}
+  MaxTimeout = -1,
+};
+var client = new RestClient(options);
+var request = new RestRequest("https://nndev1.service-now.com/api/nn/nn_request_api/createRequest", Method.Post);
+request.AddHeader("Content-Type", "application/json");
+request.AddHeader("Authorization", "Basic bm5fc2NfYXBpX2pwX2F1dG9tYXRpb246QzM0NTlZNzkyNmI3RzFkVGhKMkExV0MyIVU1S0Q2WkY0MTFm");
+request.AddHeader("Cookie", "BIGipServerpool_nndev1=16695889c70ed9d922533c1379eeeb86; JSESSIONID=44EA44B3AE0A69261F83DF3FABFAF06E; glide_node_id_for_js=c048b693c240168786b84f012b7ca1cc075b9e0bdb4835972a689af78504c0cc; glide_session_store=8D7F25453353DAD419F21A7BFD5C7B7B; glide_user_activity=U0N2M18xOm9XU09sdHBZanZhbThBOFZxSHg0VTl6Vmw5Nk5xSE96eFFmQUdaSXlFRHc9OlNQbnQyaGR0NU92dWttcUJoUG1ONTVwcFIvQ1RRbkVvTEczR3VtMWxVemc9; glide_user_route=glide.d0f37a2b3d4ebdf8ca1194c7f5f0a394");
+var body = @"{
+" + "\n" +
+@"    ""item_id"": ""07f44181dbf063806adb54904b96197d"",
+" + "\n" +
+@"    ""sysparm_quantity"": ""1"",
+" + "\n" +
+@"    ""variables"": {
+" + "\n" +
+@"        ""jap_this_application_is_only_valid"": """",
+" + "\n" +
+@"        ""jap_please_select_usage_duration_permanent_temporary"": """",
+" + "\n" +
+@"        ""jap_if_you_select_permanent"": """",
+" + "\n" +
+@"        ""jap_if_you_temporary_start_date"": """",
+" + "\n" +
+@"        ""jap_if_you_temporary_end_date"": """",
+" + "\n" +
+@"        ""jap_create_new_security_group"": """",
+" + "\n" +
+@"        ""jap_outsourcer_idrequestsecurity"": """",
+" + "\n" +
+@"        ""jap_grantaddordelete_idrequestsecurity"": """",
+" + "\n" +
+@"        ""jap_securitygroupname_idrequestsecurity"": """",
+" + "\n" +
+@"        ""jap_the_security_group_name_varies"": """",
+" + "\n" +
+@"        ""jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name"": """",
+" + "\n" +
+@"        ""jap_please_select_the_4th_to_6th_characters_of_the_security_group_name"": """",
+" + "\n" +
+@"        ""jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name_high_priv"": """",
+" + "\n" +
+@"        ""please_select_the_4th_to_6th_characters_of_the_security_group_name_high_priv"": """",
+" + "\n" +
+@"        ""jap_please_enter_the_desired_security_group_name_from_now_on"": """",
+" + "\n" +
+@"        ""jap_please_specify_the_owner_of_the_newly_created_security_group"": """",
+" + "\n" +
+@"        ""jap_name_identity_now"": """",
+" + "\n" +
+@"        ""jap_name_description_identity_now"": """",
+" + "\n" +
+@"        ""jap_security_group_deletion"": """",
+" + "\n" +
+@"        ""jap_deletion_target_security_group_name"": """",
+" + "\n" +
+@"        ""jap_security_group_member_modification"": ""true"",
+" + "\n" +
+@"        ""jap_target_security_group_name"": ""testing group 1"",
+" + "\n" +
+@"        ""please_fill_in_a_member_name_1"": {""table"": ""sys_user"",""value"": """",""field"": ""user_name""},
+" + "\n" +
+@"        ""jap_select_add_or_remove_member"": ""add_member"",
+" + "\n" +
+@"        ""please_fill_in_a_member_name_2"": {""table"": ""sys_user"",""value"": """",""field"": ""user_name""},
+" + "\n" +
+@"        ""jap_select_add_or_remove_member2"": ""remove_member"",
+" + "\n" +
+@"        ""please_fill_in_a_member_name_3"": """",
+" + "\n" +
+@"        ""jap_select_add_or_remove_member3"": ""add_member"",
+" + "\n" +
+@"        ""jap_security_group_owner_modification"": ""true"",
+" + "\n" +
+@"        ""jap_target_security_group_name2"": ""testing group 1"",
+" + "\n" +
+@"        ""jap_please_fill_in_a_new_onwer_name2"": {""table"": ""sys_user"",""value"": """",""field"": ""user_name""},
+" + "\n" +
+@"        ""jap_register_existing_security_groups_to_identitynow"": """",
+" + "\n" +
+@"        ""jap_target_security_group_name_existing"": """",
+" + "\n" +
+@"        ""jap_application_role_name"": """",
+" + "\n" +
+@"        ""jap_description_application_role"": """",
+" + "\n" +
+@"        ""jap_unregister_security_group"": """",
+" + "\n" +
+@"        ""jap_target_identity_now_role_name"": """",
+" + "\n" +
+@"        ""jap_target_security_group_name_unreg"": """",
+" + "\n" +
+@"        ""jap_reason_for_the_request_additional_information_for_the_request_etc"": """"
+" + "\n" +
+@"    },
+" + "\n" +
+@"    ""get_portal_messages"": ""true"",
+" + "\n" +
+@"    ""sysparm_no_validation"": ""true""
+" + "\n" +
+@"}";
+request.AddStringBody(body, DataFormat.Json);
+RestResponse response = await client.ExecuteAsync(request);
+Console.WriteLine(response.Content);
