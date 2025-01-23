@@ -13,9 +13,35 @@ public class IAMService
         _httpClient = httpClient;
     }
 
-    // Get Role Members
-    public async Task<List<RoleMember>> GetIDNRoleMembersAsync(string offset, string limit, string roleName, string roleId, string accessToken)
+    // Get Access Token
+    public async Task<string> GetAccessTokenAsync(string clientId, string clientSecret, string tokenEndpoint)
     {
+        var requestBody = new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "client_id", clientId },
+            { "client_secret", clientSecret }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
+        {
+            Content = new FormUrlEncodedContent(requestBody)
+        };
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var tokenResponse = JsonSerializer.Deserialize<AccessTokenResponse>(responseContent);
+
+        return tokenResponse?.AccessToken;
+    }
+
+    // Get Role Members
+    public async Task<List<RoleMember>> GetIDNRoleMembersAsync(string offset, string limit, string roleName, string roleId, string clientId, string clientSecret, string tokenEndpoint)
+    {
+        var accessToken = await GetAccessTokenAsync(clientId, clientSecret, tokenEndpoint);
+
         var headers = new Dictionary<string, string>
         {
             { "Authorization", $"Bearer {accessToken}" },
@@ -31,20 +57,30 @@ public class IAMService
             queryResultFilter = new { includes = new[] { "*" } }
         };
 
-        var requestUri = $"https://your-api-url.com/search?offset={offset}&limit={limit}";
-        var response = await PostApiAsync(requestUri, requestBody, headers);
-
-        if (response != null)
+        var results = new List<RoleMember>();
+        bool hasMoreData;
+        do
         {
-            return JsonSerializer.Deserialize<List<RoleMember>>(response);
-        }
+            var requestUri = $"https://your-api-url.com/search?offset={offset}&limit={limit}";
+            var response = await PostApiAsync(requestUri, requestBody, headers);
 
-        return new List<RoleMember>();
+            var currentResults = JsonSerializer.Deserialize<List<RoleMember>>(response);
+            results.AddRange(currentResults);
+
+            // Handle offset
+            offset = (int.Parse(offset) + currentResults.Count).ToString();
+            hasMoreData = currentResults.Count > 0;
+
+        } while (hasMoreData);
+
+        return results;
     }
 
-    // Get Roles by API ID
-    public async Task<List<Role>> GetRolesByAPIDAsync(string sourceName, string accessProfileId, string accessToken)
+    // Get Roles by Access Profile ID
+    public async Task<List<Role>> GetRolesByAPIDAsync(string sourceName, string accessProfileId, string clientId, string clientSecret, string tokenEndpoint)
     {
+        var accessToken = await GetAccessTokenAsync(clientId, clientSecret, tokenEndpoint);
+
         var headers = new Dictionary<string, string>
         {
             { "Authorization", $"Bearer {accessToken}" },
@@ -60,20 +96,17 @@ public class IAMService
             queryResultFilter = new { includes = new[] { "*" } }
         };
 
-        var requestUri = $"https://your-api-url.com/search";
+        var requestUri = "https://your-api-url.com/search";
         var response = await PostApiAsync(requestUri, requestBody, headers);
 
-        if (response != null)
-        {
-            return JsonSerializer.Deserialize<List<Role>>(response);
-        }
-
-        return new List<Role>();
+        return JsonSerializer.Deserialize<List<Role>>(response);
     }
 
     // Get Access Profiles
-    public async Task<List<AccessProfile>> GetAccessProfilesAsync(string sourceName, string accessToken)
+    public async Task<List<AccessProfile>> GetAccessProfilesAsync(string sourceName, string clientId, string clientSecret, string tokenEndpoint)
     {
+        var accessToken = await GetAccessTokenAsync(clientId, clientSecret, tokenEndpoint);
+
         var headers = new Dictionary<string, string>
         {
             { "Authorization", $"Bearer {accessToken}" },
@@ -89,14 +122,25 @@ public class IAMService
             queryResultFilter = new { includes = new[] { "*" } }
         };
 
-        var response = await PostApiAsync("https://your-api-url.com/search", requestBody, headers);
+        var results = new List<AccessProfile>();
+        bool hasMoreData;
+        int offset = 0;
 
-        if (response != null)
+        do
         {
-            return JsonSerializer.Deserialize<List<AccessProfile>>(response);
-        }
+            var requestUri = $"https://your-api-url.com/search?offset={offset}&limit=50";
+            var response = await PostApiAsync(requestUri, requestBody, headers);
 
-        return new List<AccessProfile>();
+            var currentResults = JsonSerializer.Deserialize<List<AccessProfile>>(response);
+            results.AddRange(currentResults);
+
+            // Handle offset
+            offset += currentResults.Count;
+            hasMoreData = currentResults.Count > 0;
+
+        } while (hasMoreData);
+
+        return results;
     }
 
     private async Task<string> PostApiAsync(string url, object body, Dictionary<string, string> headers)
@@ -123,9 +167,6 @@ public class IAMService
 
 
 Controller
-
-using Microsoft.AspNetCore.Mvc;
-
 [ApiController]
 [Route("api/[controller]")]
 public class IAMController : ControllerBase
@@ -143,11 +184,13 @@ public class IAMController : ControllerBase
         [FromQuery] string limit,
         [FromQuery] string roleName,
         [FromQuery] string roleId,
-        [FromHeader] string accessToken)
+        [FromQuery] string clientId,
+        [FromQuery] string clientSecret,
+        [FromQuery] string tokenEndpoint)
     {
         try
         {
-            var result = await _iamService.GetIDNRoleMembersAsync(offset, limit, roleName, roleId, accessToken);
+            var result = await _iamService.GetIDNRoleMembersAsync(offset, limit, roleName, roleId, clientId, clientSecret, tokenEndpoint);
             return Ok(result);
         }
         catch (Exception ex)
@@ -160,11 +203,13 @@ public class IAMController : ControllerBase
     public async Task<IActionResult> GetRolesByAPID(
         [FromQuery] string sourceName,
         [FromQuery] string accessProfileId,
-        [FromHeader] string accessToken)
+        [FromQuery] string clientId,
+        [FromQuery] string clientSecret,
+        [FromQuery] string tokenEndpoint)
     {
         try
         {
-            var result = await _iamService.GetRolesByAPIDAsync(sourceName, accessProfileId, accessToken);
+            var result = await _iamService.GetRolesByAPIDAsync(sourceName, accessProfileId, clientId, clientSecret, tokenEndpoint);
             return Ok(result);
         }
         catch (Exception ex)
@@ -176,11 +221,13 @@ public class IAMController : ControllerBase
     [HttpGet("GetAccessProfiles")]
     public async Task<IActionResult> GetAccessProfiles(
         [FromQuery] string sourceName,
-        [FromHeader] string accessToken)
+        [FromQuery] string clientId,
+        [FromQuery] string clientSecret,
+        [FromQuery] string tokenEndpoint)
     {
         try
         {
-            var result = await _iamService.GetAccessProfilesAsync(sourceName, accessToken);
+            var result = await _iamService.GetAccessProfilesAsync(sourceName, clientId, clientSecret, tokenEndpoint);
             return Ok(result);
         }
         catch (Exception ex)
@@ -193,8 +240,7 @@ public class IAMController : ControllerBase
 
 
 
-Model
-
+Models
 public class RoleMember
 {
     [JsonPropertyName("attributes_uid")]
@@ -216,4 +262,11 @@ public class AccessProfile
 }
 
 
+
+
+
 builder.Services.AddHttpClient<IAMService>();
+
+
+
+GET https://your-api.com/api/iam/GetRoleMembers?offset=0&limit=100&roleName=TestRole&roleId=12345&clientId=yourClientId&clientSecret=yourClientSecret&tokenEndpoint=https://your-token-url.com/oauth2/token
