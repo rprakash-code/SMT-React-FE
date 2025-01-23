@@ -1,177 +1,337 @@
-var requestData = new
-{
-    item_id = "07f44181dbf063806adb54904b96197d",
-    sysparm_quantity = "1",
-    variables = new
-    {
-        jap_this_application_is_only_valid = "",
-        jap_please_select_usage_duration_permanent_temporary = "",
-        jap_if_you_select_permanent = "",
-        jap_if_you_temporary_start_date = "",
-        jap_if_you_temporary_end_date = "",
-        jap_create_new_security_group = "",
-        jap_outsourcer_idrequestsecurity = "",
-        jap_grantaddordelete_idrequestsecurity = "",
-        jap_securitygroupname_idrequestsecurity = "",
-        jap_the_security_group_name_varies = "",
-        jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name = "",
-        jap_please_select_the_4th_to_6th_characters_of_the_security_group_name = "",
-        jap_please_select_the_1st_to_3rd_characters_of_the_security_group_name_high_priv = "",
-        please_select_the_4th_to_6th_characters_of_the_security_group_name_high_priv = "",
-        jap_please_enter_the_desired_security_group_name_from_now_on = "",
-        jap_please_specify_the_owner_of_the_newly_created_security_group = "",
-        jap_name_identity_now = "",
-        jap_name_description_identity_now = "",
-        jap_security_group_deletion = "",
-        jap_deletion_target_security_group_name = "",
-        jap_security_group_member_modification = "true",
-        jap_target_security_group_name = "testing group 1",
-        please_fill_in_a_member_name_1 = new
-        {
-            table = "sys_user",
-            value = "",
-            field = "user_name"
-        },
-        jap_select_add_or_remove_member = "add_member",
-        please_fill_in_a_member_name_2 = new
-        {
-            table = "sys_user",
-            value = "",
-            field = "user_name"
-        },
-        jap_select_add_or_remove_member2 = "remove_member",
-        please_fill_in_a_member_name_3 = "",
-        jap_select_add_or_remove_member3 = "add_member",
-        jap_security_group_owner_modification = "true",
-        jap_target_security_group_name2 = "testing group 1",
-        jap_please_fill_in_a_new_onwer_name2 = new
-        {
-            table = "sys_user",
-            value = "",
-            field = "user_name"
-        },
-        jap_register_existing_security_groups_to_identitynow = "",
-        jap_target_security_group_name_existing = "",
-        jap_application_role_name = "",
-        jap_description_application_role = "",
-        jap_unregister_security_group = "",
-        jap_target_identity_now_role_name = "",
-        jap_target_security_group_name_unreg = "",
-        jap_reason_for_the_request_additional_information_for_the_request_etc = ""
-    },
-    get_portal_messages = "true",
-    sysparm_no_validation = "true"
-};
+$SourceNames = 'INS-JP_LSA','INS-JP_CSA','INS-JP_WSA','INS-JP_AD_Groups'
 
-
-
-
-string requestBody = JsonConvert.SerializeObject(requestData);
-
-
-
-var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
-
-var client = new HttpClient();
-var response = await client.PostAsync("https://nndev1.service-now.com/api/nn/nn_request_api/createRequest", content);
-
-response.EnsureSuccessStatusCode();
-Console.WriteLine(await response.Content.ReadAsStringAsync());
-
-
-
-public class ApiService
-{
-    private readonly HttpClient _httpClient;
-
-    public ApiService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
+function Get-IDN-RoleMembers {
+ Param(
+        [Parameter(Mandatory=$true)][string]$p_offset_Search_RM,
+        [Parameter(Mandatory=$true)][string]$p_Limit_Search_RM,
+        [Parameter(Mandatory=$true)][string]$p_RO_Name,
+        [Parameter(Mandatory=$true)][string]$p_RO_ID
+      )
+      $gRolesIdentities.Clear() 
+    $headers = @{ 
+        Authorization = $authValue
+        Accept = "application/json"
+        "Content-Type" = "application/json"
     }
 
-    public async Task<string> CreateRequestAsync(object requestData, string username, string password)
+$p_R_body = @"
     {
-        // Serialize the request data
-        string requestBody = JsonConvert.SerializeObject(requestData);
+    "indices": [
+        "identities"
+    ],
+    "query": {
+        "query": "@access(id:\"$p_RO_ID\")"
+    },
+    "sort": [
+        "name"
+    ],
+    "queryResultFilter": {
+        "includes": [ 
+       *
+        ]
+    }
+}
+"@
+   $IDNFilterRM =  "?offset=$p_offset_Search_RM&limit=$p_Limit_Search_RM"
+     TRY {
+   $SailPoint_GetRoleMembers_API = Invoke-RestMethod $IDN_Search_API$IDNFilterRM -Method POST -Headers $headers -Body $p_R_body
 
-        // Create the HTTP request
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://nndev1.service-now.com/api/nn/nn_request_api/createRequest");
+   if($SailPoint_GetRoleMembers_API.Count -gt 0)
+   {
+    
+   }
+   #write-host $sRoeName ":" $sRoleID ":" "Success" 
+    }
+    CATCH {
+    Exit
+    }
+    
 
-        // Add Basic Authentication header
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
-        request.Headers.Add("Authorization", $"Basic {credentials}");
+return $SailPoint_GetRoleMembers_API
 
-        // Add JSON content
-        request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+}
 
-        // Send the request and handle the response
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadAsStringAsync();
+#Offset
+$s_offset_Search_RO = 0
+
+#Limit
+$s_Limit_Search_RO = 250
+
+$accessToken = Get-AccessToken
+$authValue = "Bearer $accessToken"
+
+function Get-Role-Search-By-APID
+{
+ Param(
+        [Parameter(Mandatory=$true)][string]$p_Source_Name,
+        [Parameter(Mandatory=$true)][string]$p_AP_ID,
+        [Parameter(Mandatory=$true)][string]$IsRoleMembers,
+        [Parameter(Mandatory=$false)][string]$p_EN_Name,
+        [Parameter(Mandatory=$false)][string]$p_EN_ID,
+        [Parameter(Mandatory=$false)][string]$p_AP_Owner_ID,
+        [Parameter(Mandatory=$false)][string]$p_AP_Description,
+        [Parameter(Mandatory=$false)][string]$p_AP_SegmentName,
+        [Parameter(Mandatory=$false)][string]$p_AP_Name
+      )
+
+    $headers = @{ 
+        Authorization = $authValue
+        Accept = "application/json"
+        "Content-Type" = "application/json"
+    }
+
+    $body_RO = @"
+    {
+    "indices": [
+        "roles"
+    ],
+    "query": {
+        "query": "accessProfiles.id:\"$p_AP_ID\""
+    },
+    "sort": [
+        "name"
+    ],
+    "queryResultFilter": {
+        "includes": [ 
+            *
+        ]
+    }
+}
+"@
+
+  try {
+        $sSearchResult_RO = Invoke-RestMethod $IDN_Search_API -Method POST -Headers $headers -Body $body_RO
+        #$sSearchResult_RO = Read_from_Search -p_offset_Search_AP $s_offset_Search_RO  -p_Limit_Search_AP $s_Limit_Search_RO -p_body $body_RO
+        if($sSearchResult_RO.Count -gt 0)
+        {
+     
+          #  $s_offset_Search_RO = ($s_offset_Search_RO)+50
+              foreach ($roleObj in $sSearchResult_RO) {
+              try            
+               { 
+                $sEntitlement_Error = "-"
+                $sEntitlement_ErrorMessage = "-"    
+                $sIDN_ErrorMessage  = "-" 
+                $sAD_ErrorMessage  = "-"    
+                        
+                  if($roleObj.description.StartsWith("[BR]"))
+                     {     
+                            $sMembersCollections =  New-Object System.Collections.ArrayList
+                            $s_SG_MembersCollections =  New-Object System.Collections.ArrayList
+                            $sGetRole_Result =  New-Object System.Collections.ArrayList
+
+                            do
+                            {
+                                  $pGetRole_Result =  Get-IDN-RoleMembers -p_RO_Name $roleObj.name -p_RO_ID $roleObj.id -p_offset_Search_RM $s_offset_Search_RO -p_Limit_Search_RM $s_Limit_Search_RO
+                                    $properties=""
+                                  foreach ($memObj in $pGetRole_Result){                           
+                                        $properties = @{
+                                             attributes_uid =  $memObj.attributes.uid
+                                        }
+                                  $sGetRole_Result.add( (New-Object psobject -Property $properties)) | Out-Null
+                                  }
+                                  $s_offset_Search_RO = ($s_offset_Search_RO)+250
+                            }
+                            while ($pGetRole_Result.Count -gt 0)
+                            if($pGetRole_Result.Count -eq 0 )
+                            {
+                                # "No RoleMembers"
+                               # Write-Host "No RoleMembers"
+                            }
+                            else
+                            {
+                                # Exit
+                            }
+                            $Members = @{
+                            MembersCount = ($sGetRole_Result | Measure-Object).Count
+                            }
+                            $sMembersCollections.add( (New-Object psobject -Property $Members)) | Out-Null
+
+
+                            $sAP_Multiples_Names = "";
+                            $sAP_Multiples_Ids = "";
+
+                            foreach($apObj in $roleObj.accessProfiles){
+
+                            if($apObj.name -eq "GRBPAC-JP-ChatGPT")
+                            {
+                              #  Write-Host "GRBPAC-JP-ChatGPT"
+                            }
+
+                            if($apObj.id -eq $p_AP_ID)
+                            {
+                                 $sAP_Multiples_Names = $apObj.name
+                                 $sAP_Multiples_Ids = $apObj.id
+                            }
+                            # if($sAP_Multiples_Names -eq "")
+                            # {
+                            #     $sAP_Multiples_Names = $apObj.name
+                            #    $sAP_Multiples_Ids = $apObj.id
+                            #}
+                            #else
+                            # {
+                            #     $sAP_Multiples_Names =  $sAP_Multiples_Names + ";" +$apObj.name
+                            #     $sAP_Multiples_Ids =  $sAP_Multiples_Ids + ";" +  $apObj.id
+                            #}
+                            }
+                            if($sAP_Multiples_Names -eq "")
+                            {
+                                $sAP_Multiples_Names = $roleObj.accessProfiles.name
+                                $sAP_Multiples_Ids = $roleObj.accessProfiles.id
+                            }
+
+                            }
+                            }
+                            }
+                            }
+Function Read_from_Search {
+ Param(
+        [Parameter(Mandatory=$true)][string]$p_offset_Search_AP,
+        [Parameter(Mandatory=$true)][string]$p_Limit_Search_AP,
+        [Parameter(Mandatory=$true)][string]$p_body
+
+        )
+Process{
+    $headers = @{ 
+        Authorization = $authValue
+        Accept = "application/json"
+        "Content-Type" = "application/json"
+    }
+
+    $IDNFilter =  "?offset=$p_offset_Search_AP&limit=$p_Limit_Search_AP"
+    TRY {
+         $sGetSearch_Results = Invoke-RestMethod -Uri $IDN_Search_API$IDNFilter  -Method Post  -headers $headers -Body $p_body
+ 
+    }
+    CATCH 
+    {
+        Exit
+    }
+        return $sGetSearch_Results     
     }
 }
 
 
-[ApiController]
-[Route("api/[controller]")]
-public class RequestController : ControllerBase
-{
-    private readonly ApiService _apiService;
+#Offset
+$s_offset_Search_AP = 0
+#Limit
+$s_Limit_Search_AP = 50
+function Get-AccessProfile-Search {
+ Param(
+        [Parameter(Mandatory=$true)][string]$p_Source_Name
+      )
 
-    public RequestController(ApiService apiService)
+    $body_AP = @"
     {
-        _apiService = apiService;
+    "indices": [
+        "accessprofiles"
+    ],
+    "query": {
+        "query": "source.name:\"$p_Source_Name)\""
+    },
+    "sort": [
+        "name"
+    ],
+    "queryResultFilter": {
+        "includes": [ 
+          *
+        ]
     }
+}
+"@
 
-    [HttpPost("create")]
-    public async Task<IActionResult> CreateRequest([FromBody] object requestData, [FromQuery] string username, [FromQuery] string password)
-    {
-        try
+    try {
+    $sAccessProfileCollections= New-Object System.Collections.ArrayList
+       
+     do {
+        $sSearchResult_AP = Read_from_Search -p_offset_Search_AP $s_offset_Search_AP  -p_Limit_Search_AP $s_Limit_Search_AP -p_body $body_AP
+        if($sSearchResult_AP.Count -gt 0)
         {
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
-            {
-                return BadRequest(new { message = "Username and password are required for authentication." });
+            $s_offset_Search_AP = ($s_offset_Search_AP)+50
+              foreach ($accessProfileObj in $sSearchResult_AP) {
+              try
+              {
+                $properties = @{
+                        Name = $accessProfileObj.name
+                        Id = $accessProfileObj.id
+                        Description = $accessProfileObj.description
+                        OwnerName  = $accessProfileObj.owner.name
+                        Source = $accessProfileObj.source.name
+                        Enabled  = $accessProfileObj.enabled
+                        Requestable = $accessProfileObj.requestable
+                        Created =   $accessProfileObj.created                         
+                        Modified   = $accessProfileObj.modified              
+                        Owner   = $accessProfileObj.owner                 
+                        Entitlements   = $accessProfileObj.entitlements          
+                        # AccessRequestConfig  = $accessProfileObj.accessRequestConfig    
+                        #  RevocationRequestConfig  = $accessProfileObj.revocationRequestConfig
+                        Segments   = $accessProfileObj.segments              
+
+                        }
+                $sAccessProfileCollections.add( (New-Object psobject -Property $properties)) | Out-Null
+               }
+              catch {
+                 write-host -ForegroundColor White -BackgroundColor RED "forloop FAILED1"
+                }
             }
 
-            // Call the service to send the API request
-            var response = await _apiService.CreateRequestAsync(requestData, username, password);
-
-            // Return the response
-            return Ok(response);
+          } 
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "An error occurred while creating the request.", error = ex.Message });
-        }
+         while ($sSearchResult_AP.Count -gt 0)
+            if($sSearchResult_AP.Count -eq 0 )
+            {
+              #"No Accessprofile"
+              # Write-Host "No Accessprofile"
+            }
+            else
+            {
+             # Exit
+            }
     }
+    catch {
+        Exit
+    }
+    return $sAccessProfileCollections
 }
-
-
-
-
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container
-builder.Services.AddControllers();
-builder.Services.AddHttpClient<ApiService>();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline
-app.MapControllers();
-
-app.Run();
-
-
-
-public void ConfigureServices(IServiceCollection services)
+Function Get-IDN-Roles()
 {
-    services.AddControllers();
-    services.AddHttpClient<ApiService>();
+   Param(
+        [Parameter(Mandatory=$true)][string]$pSourceName,
+        [Parameter(Mandatory=$true)][string]$IsRoleMembers
+
+        )
+        TRY
+        {
+        $gRolesCollections.Clear()
+        $results_AccessProfile =  Get-AccessProfile-Search -p_Source_Name $pSourceName
+         for ($i = $results_AccessProfile.Count -1; $i -ge 0; $i--) {
+ 
+               Get-Role-Search-By-APID -p_Source_Name $pSourceName -p_AP_ID  $results_AccessProfile[$i].id -IsRoleMembers $IsRoleMembers -p_EN_Name $results_AccessProfile[$i].Entitlements[0].name -p_EN_ID $results_AccessProfile[$i].Entitlements[0].id -p_AP_Owner_ID $results_AccessProfile[$i].Owner.id -p_AP_Description $results_AccessProfile[$i].Description -p_AP_SegmentName $results_AccessProfile[$i].Segments[0].name -p_AP_Name $results_AccessProfile[$i].Name
+     
+            }
+        }
+        CATCH {
+            write-host "Get-IDN-Roles : Failed"
+            Write-Host $Error
+             $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
+        $MessageBody = "Dear Team,<br><br> Below is the link of IAM Base Report<br>"
+        $MessageBody += $Error
+        $Subject = "Line No: 1119 - Error in Report Upload IAM Base Report - " + $TodayDate
+        UpdateListItem_MonitoringStatusFailed_SP -p_ListName $IAMBackgroundTableListName -p_ListId $IAMBackgroundTableListId -p_Type "UpdateStatusFailed" -p_UsageReport_Status "Failed" -p_OwnerReport_Status "Failed"
+        Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
+            Exit
+
+        }
+    return $gRolesCollections
 }
-
-
-
+foreach ($sSourceName in $SourceNames)
+{
+Write-host  "IAM Reconcilliation Script - Source : " $sSourceName " Started"
+    $sResponse_ReadRoles_Output = ""
+    Write-Host $sResponse_ReadRoles_Output 
+    $sResponse_ReadRoles_Output  = Get-IDN-Roles -pSourceName $sSourceName -IsRoleMembers $true 
+    $sResponse_ReadRoles_Output  | Select-Object @{Name="SourceName";Expression={$sSourceName}},@{Name="RoleID";Expression={$_.Id}},@{Name="RoleName";Expression={$_.Name}},@{Name="RoleDescription";Expression={$_.Description}},@{Name="RoleOwnerName";Expression={$_.OwnerName}},@{Name="RoleOwnerInsimID";Expression={$_.RoleOwnerInsimID}},@{Name="RoleEnabled";Expression={$_.Enabled}},@{Name="AccessProfileId";Expression={$_.AccessProfile_ID}},@{Name="AccessProfileName";Expression={$_.AccessProfile_Name}},@{Name="AccessProfileDescription";Expression={$_.AccessProfile_Description}},@{Name="EntitlementName";Expression={$_.Entitlement_Name}},@{Name="EntitlementId";Expression={$_.Entitlement_ID}}, @{Name="RoleMembersFromSailPoint";Expression={$_.RoleMembersFromSailPoint[1].InsimId}}, @{Name="ADGroupMembership";Expression={$_.RoleMembersFromAD.InsimId}}, @{Name="AccessProfileOwners";Expression={$_.OwnerNameFromSP}}, @{Name="SecurityGroupOwners";Expression={$_.OwnerNameFromAD}}, @{Name="IsOwnerMatch";Expression={$_.IsOwnerMatch}}, @{Name="IsRoleMemberMatch";Expression={$_.IsRoleMemberMatch}}, @{Name="MembersADDtoAD";Expression={$_.MemberListsNotinAD}}, @{Name="MembersRemoveFromAD";Expression={$_.MemberListsNotinSailPoint}} ,@{Name="AccessProfileSegmentName";Expression={$_.AccessProfile_SegmentName}}     | Export-Excel $Excel_OutPut_Path  -WorksheetName "RC"  -Append 
+     
+Write-host  "IAM Reconcilliation Script - Source : " $sSourceName " Completed"
+}
