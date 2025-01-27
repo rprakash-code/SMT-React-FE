@@ -1,51 +1,89 @@
-[ApiController]
-[Route("api/[controller]")]
-public class UserController : ControllerBase
+using Microsoft.Graph;
+using Microsoft.Identity.Client;
+using System;
+using System.Threading.Tasks;
+
+public class GraphService
 {
-    [HttpGet("username")]
-    public IActionResult GetUsername()
+    private readonly string _clientId;
+    private readonly string _clientSecret;
+    private readonly string _tenantId;
+
+    public GraphService(IConfiguration configuration)
     {
-        var username = HttpContext.User.Identity?.Name; // E.g., "DOMAIN\\Username"
-        if (string.IsNullOrEmpty(username))
+        // Read Azure AD configurations from appsettings.json or environment variables
+        _clientId = configuration["AzureAd:ClientId"];
+        _clientSecret = configuration["AzureAd:ClientSecret"];
+        _tenantId = configuration["AzureAd:TenantId"];
+    }
+
+    // Fetch user details from Microsoft Graph API
+    public async Task<string> GetUserDetails(string userId)
+    {
+        // Create a confidential client application
+        var confidentialClient = ConfidentialClientApplicationBuilder
+            .Create(_clientId)
+            .WithClientSecret(_clientSecret)
+            .WithAuthority(new Uri($"https://login.microsoftonline.com/{_tenantId}"))
+            .Build();
+
+        // Acquire token for Microsoft Graph
+        var token = await confidentialClient.AcquireTokenForClient(new[] { "https://graph.microsoft.com/.default" }).ExecuteAsync();
+
+        // Initialize Graph client with the token
+        var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(request =>
         {
-            return Unauthorized();
-        }
-        return Ok(new { Username = username });
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.AccessToken);
+            return Task.CompletedTask;
+        }));
+
+        // Fetch user details from Microsoft Graph
+        var user = await graphClient.Users[userId].Request().GetAsync();
+        return user.DisplayName; // Return the user's display name
     }
 }
 
 
 
-import React, { useEffect, useState } from "react";
 
-const App = () => {
-    const [username, setUsername] = useState("");
 
-    useEffect(() => {
-        const fetchUsername = async () => {
-            try {
-                const response = await fetch("https://your-api-domain/api/user/username", {
-                    credentials: "include", // Ensures cookies/credentials are sent
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setUsername(data.Username);
-                } else {
-                    console.error("Failed to fetch username");
-                }
-            } catch (error) {
-                console.error("Error fetching username:", error);
-            }
-        };
+builder.Services.AddSingleton<GraphService>();
 
-        fetchUsername();
-    }, []);
 
-    return (
-        <div>
-            <h1>Welcome, {username || "User"}!</h1>
-        </div>
-    );
-};
 
-export default App;
+
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
+{
+    private readonly GraphService _graphService;
+
+    public UserController(GraphService graphService)
+    {
+        _graphService = graphService;
+    }
+
+    [HttpGet("{userId}")]
+    public async Task<IActionResult> GetUserDetails(string userId)
+    {
+        try
+        {
+            var userDetails = await _graphService.GetUserDetails(userId);
+            return Ok(new { DisplayName = userDetails });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
+        }
+    }
+}
+
+
+
+
