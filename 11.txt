@@ -1,53 +1,131 @@
-using Microsoft.Graph;
-using Microsoft.Identity.Client;
-using System;
-using System.Threading.Tasks;
+export const msalConfig = {
+  auth: {
+    clientId: "your-client-id", // Your Azure AD App Registration Client ID
+    authority: "https://login.microsoftonline.com/your-tenant-id", // Your Azure AD Tenant ID
+    redirectUri: "http://localhost:3000", // The URL to redirect after login
+  },
+  cache: {
+    cacheLocation: "sessionStorage", // Store token in sessionStorage
+    storeAuthStateInCookie: false, // Set to true for IE11
+  },
+};
 
-public class GraphService
+export const loginRequest = {
+  scopes: ["User.Read"], // You only need the User.Read permission for this scenario
+};
+
+
+
+import React, { useEffect, useState } from "react";
+import { PublicClientApplication } from "@azure/msal-browser";
+import { msalConfig, loginRequest } from "./msalConfig";
+
+const msalInstance = new PublicClientApplication(msalConfig);
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkAccount = () => {
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        setUser(accounts[0].username); // Set the username
+      }
+    };
+    checkAccount();
+  }, []);
+
+  const login = async () => {
+    try {
+      const loginResponse = await msalInstance.loginPopup(loginRequest);
+      const tokenResponse = await msalInstance.acquireTokenSilent(loginRequest);
+      setAccessToken(tokenResponse.accessToken);
+    } catch (error) {
+      console.error("Login failed", error);
+    }
+  };
+
+  const fetchUserData = async () => {
+    if (accessToken) {
+      const response = await fetch("http://localhost:5000/api/user", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      console.log("User data:", data);
+    }
+  };
+
+  return (
+    <div>
+      {!user ? (
+        <button onClick={login}>Login</button>
+      ) : (
+        <div>
+          <h1>Welcome {user}</h1>
+          <button onClick={fetchUserData}>Fetch User Data</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default App;
+
+
+
+
+
+
+
+
+
+
+
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.Resource;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllers();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.AddMicrosoftGraph(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.AddAuthorization(options =>
 {
-    private readonly string _clientId;
-    private readonly string _clientSecret;
-    private readonly string _tenantId;
+    options.FallbackPolicy = options.DefaultPolicy;
+});
 
-    public GraphService(IConfiguration configuration)
-    {
-        // Read Azure AD configurations from appsettings.json or environment variables
-        _clientId = configuration["AzureAd:ClientId"];
-        _clientSecret = configuration["AzureAd:ClientSecret"];
-        _tenantId = configuration["AzureAd:TenantId"];
-    }
+var app = builder.Build();
 
-    // Fetch user details from Microsoft Graph API
-    public async Task<string> GetUserDetails(string userId)
-    {
-        // Create a confidential client application
-        var confidentialClient = ConfidentialClientApplicationBuilder
-            .Create(_clientId)
-            .WithClientSecret(_clientSecret)
-            .WithAuthority(new Uri($"https://login.microsoftonline.com/{_tenantId}"))
-            .Build();
+// Use authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
-        // Acquire token for Microsoft Graph
-        var token = await confidentialClient.AcquireTokenForClient(new[] { "https://graph.microsoft.com/.default" }).ExecuteAsync();
+// Map the controllers to routes
+app.MapControllers();
 
-        // Initialize Graph client with the token
-        var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(request =>
-        {
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.AccessToken);
-            return Task.CompletedTask;
-        }));
+app.Run();
 
-        // Fetch user details from Microsoft Graph
-        var user = await graphClient.Users[userId].Request().GetAsync();
-        return user.DisplayName; // Return the user's display name
-    }
+
+
+
+
+
+{
+  "AzureAd": {
+    "ClientId": "your-client-id",
+    "TenantId": "your-tenant-id",
+    "ClientSecret": "your-client-secret",
+    "Authority": "https://login.microsoftonline.com/your-tenant-id"
+  }
 }
-
-
-
-
-
-builder.Services.AddSingleton<GraphService>();
 
 
 
@@ -55,6 +133,8 @@ builder.Services.AddSingleton<GraphService>();
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Graph;
+using Microsoft.Identity.Web;
 using System.Threading.Tasks;
 
 [Authorize]
@@ -62,27 +142,44 @@ using System.Threading.Tasks;
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    private readonly GraphService _graphService;
+    private readonly IGraphServiceClient _graphServiceClient;
 
-    public UserController(GraphService graphService)
+    public UserController(IGraphServiceClient graphServiceClient)
     {
-        _graphService = graphService;
+        _graphServiceClient = graphServiceClient;
     }
 
-    [HttpGet("{userId}")]
-    public async Task<IActionResult> GetUserDetails(string userId)
+    [HttpGet]
+    public async Task<IActionResult> GetUserDetails()
     {
         try
         {
-            var userDetails = await _graphService.GetUserDetails(userId);
-            return Ok(new { DisplayName = userDetails });
+            var user = await _graphServiceClient.Me.Request().GetAsync();
+            return Ok(new { user.DisplayName, user.UserPrincipalName, user.Mail });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
+            return BadRequest(new { Message = "Error fetching user details", Details = ex.Message });
         }
     }
 }
+
+
+
+
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy => policy.WithOrigins("http://localhost:3000")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod());
+});
+
+var app = builder.Build();
+
+app.UseCors("AllowReactApp");
 
 
 
