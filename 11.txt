@@ -1,13 +1,80 @@
-pacakge main
+using Microsoft.Graph;
+using Microsoft.Extensions.Configuration;
+using Azure.Identity;
+using System.Threading.Tasks;
 
-import "net/http"
+public class AuthService
+{
+    private readonly GraphServiceClient _graphClient;
 
-func mains()  {
-	http.HandleFunc("/", handleRoot)
-	fmt.Println("Server is runniong on port 8080")
-	http.ListenAndServe(":8080", nil) //
+    public AuthService(IConfiguration configuration)
+    {
+        // Initialize Graph Service Client with Managed Identity
+        _graphClient = new GraphServiceClient(new Azure.Identity.DefaultAzureCredential());
+    }
+
+    /// <summary>
+    /// Get the profile of the logged-in user.
+    /// </summary>
+    /// <param name="userId">Azure AD user ID</param>
+    /// <returns>User profile details</returns>
+    public async Task<User> GetUserProfileAsync()
+    {
+        // Retrieves the current user's profile from Microsoft Graph
+        return await _graphClient.Me
+            .Request()
+            .GetAsync();
+    }
 }
 
-func handleRoot(w http.ResponseWrite, r *http.Request){
-	fmt.Fprintf(w, "Welcome to golang server")
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly AuthService _authService;
+
+    public AuthController(AuthService authService)
+    {
+        _authService = authService;
+    }
+
+    /// <summary>
+    /// Endpoint to get the logged-in user's profile.
+    /// </summary>
+    /// <returns>User profile</returns>
+    [HttpGet("user-profile")]
+    [Authorize] // Requires authentication
+    public async Task<IActionResult> GetUserProfile()
+    {
+        try
+        {
+            var userProfile = await _authService.GetUserProfileAsync();
+            return Ok(userProfile);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
+
+
+
+builder.Services.AddScoped<AuthService>();
+
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(options =>
+    {
+        builder.Configuration.Bind("AzureAd", options);
+    }, options => { builder.Configuration.Bind("AzureAd", options); });
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+
