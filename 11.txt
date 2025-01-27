@@ -1,53 +1,51 @@
-import React from 'react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-
-const MyDropdownMenu: React.FC = () => (
-  <DropdownMenu.Root>
-    <DropdownMenu.Trigger asChild>
-      <button style={{ padding: '10px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '5px' }}>
-        Open Menu
-      </button>
-    </DropdownMenu.Trigger>
-    <DropdownMenu.Portal>
-      <DropdownMenu.Content
-        style={{
-          backgroundColor: 'white',
-          border: '1px solid #ccc',
-          borderRadius: '5px',
-          padding: '10px',
-          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        <DropdownMenu.Item
-          onSelect={() => alert('Item 1 selected')}
-          style={{ padding: '5px 10px', cursor: 'pointer' }}
-        >
-          Item 1
-        </DropdownMenu.Item>
-        <DropdownMenu.Item
-          onSelect={() => alert('Item 2 selected')}
-          style={{ padding: '5px 10px', cursor: 'pointer' }}
-        >
-          Item 2
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu.Portal>
-  </DropdownMenu.Root>
-);
-
-export default MyDropdownMenu;
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
+{
+    [HttpGet("username")]
+    public IActionResult GetUsername()
+    {
+        var username = HttpContext.User.Identity?.Name; // E.g., "DOMAIN\\Username"
+        if (string.IsNullOrEmpty(username))
+        {
+            return Unauthorized();
+        }
+        return Ok(new { Username = username });
+    }
+}
 
 
 
-import React from 'react';
-import MyDropdownMenu from '@/components/DropdownMenu';
+import React, { useEffect, useState } from "react";
 
-const Home: React.FC = () => {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <MyDropdownMenu />
-    </div>
-  );
+const App = () => {
+    const [username, setUsername] = useState("");
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+            try {
+                const response = await fetch("https://your-api-domain/api/user/username", {
+                    credentials: "include", // Ensures cookies/credentials are sent
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setUsername(data.Username);
+                } else {
+                    console.error("Failed to fetch username");
+                }
+            } catch (error) {
+                console.error("Error fetching username:", error);
+            }
+        };
+
+        fetchUsername();
+    }, []);
+
+    return (
+        <div>
+            <h1>Welcome, {username || "User"}!</h1>
+        </div>
+    );
 };
 
-export default Home;
+export default App;
