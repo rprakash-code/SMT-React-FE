@@ -1,80 +1,53 @@
-using Microsoft.Graph;
-using Microsoft.Extensions.Configuration;
-using Azure.Identity;
-using System.Threading.Tasks;
+import React from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
-public class AuthService
-{
-    private readonly GraphServiceClient _graphClient;
+const MyDropdownMenu: React.FC = () => (
+  <DropdownMenu.Root>
+    <DropdownMenu.Trigger asChild>
+      <button style={{ padding: '10px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '5px' }}>
+        Open Menu
+      </button>
+    </DropdownMenu.Trigger>
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content
+        style={{
+          backgroundColor: 'white',
+          border: '1px solid #ccc',
+          borderRadius: '5px',
+          padding: '10px',
+          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        <DropdownMenu.Item
+          onSelect={() => alert('Item 1 selected')}
+          style={{ padding: '5px 10px', cursor: 'pointer' }}
+        >
+          Item 1
+        </DropdownMenu.Item>
+        <DropdownMenu.Item
+          onSelect={() => alert('Item 2 selected')}
+          style={{ padding: '5px 10px', cursor: 'pointer' }}
+        >
+          Item 2
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  </DropdownMenu.Root>
+);
 
-    public AuthService(IConfiguration configuration)
-    {
-        // Initialize Graph Service Client with Managed Identity
-        _graphClient = new GraphServiceClient(new Azure.Identity.DefaultAzureCredential());
-    }
-
-    /// <summary>
-    /// Get the profile of the logged-in user.
-    /// </summary>
-    /// <param name="userId">Azure AD user ID</param>
-    /// <returns>User profile details</returns>
-    public async Task<User> GetUserProfileAsync()
-    {
-        // Retrieves the current user's profile from Microsoft Graph
-        return await _graphClient.Me
-            .Request()
-            .GetAsync();
-    }
-}
-
-
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
-{
-    private readonly AuthService _authService;
-
-    public AuthController(AuthService authService)
-    {
-        _authService = authService;
-    }
-
-    /// <summary>
-    /// Endpoint to get the logged-in user's profile.
-    /// </summary>
-    /// <returns>User profile</returns>
-    [HttpGet("user-profile")]
-    [Authorize] // Requires authentication
-    public async Task<IActionResult> GetUserProfile()
-    {
-        try
-        {
-            var userProfile = await _authService.GetUserProfileAsync();
-            return Ok(userProfile);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-    }
-}
+export default MyDropdownMenu;
 
 
 
-builder.Services.AddScoped<AuthService>();
+import React from 'react';
+import MyDropdownMenu from '@/components/DropdownMenu';
 
+const Home: React.FC = () => {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <MyDropdownMenu />
+    </div>
+  );
+};
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(options =>
-    {
-        builder.Configuration.Bind("AzureAd", options);
-    }, options => { builder.Configuration.Bind("AzureAd", options); });
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-
+export default Home;
