@@ -27,16 +27,11 @@ $IDN_Search_API = 'https://nngroup.api.identitynow.com/v3/search'
 $gRolesCollections  = New-Object System.Collections.ArrayList 
 $gRolesIdentities   = New-Object System.Collections.ArrayList
 
-
-#Sharepoint Details
-#$UploadSiteURl = $acattr_SPO_AutomationSiteURL
-#$TodayDate =  (Get-Date).tostring("yyyyMMddhhmmss")
 $TodayDate =  (Get-Date).tostring("yyyyMMddhhmmss")
 $Excel_File_Name = "IAM_BaseReport_"+ $TodayDate + ".xlsx"
 $Excel_OutPut_Path = "C:\Automation\Team\Prakash\SMT\Report\$Excel_File_Name"
 $currYearMonth  = (Get-Date).tostring("yyyy/MM")
 
-#$SPORootSiteURL = $acattr_SPO_RootSiteURL
 $ServerName = "srpafinf0184.insim.biz" 
 
 #Send Mail Variables
@@ -83,10 +78,6 @@ Function Send-EmailNotification_StakeHolders($Body, $subject)
     }
 }
  
-
-###########################################################
-#    Upload File to Sharepoint Online
-###########################################################
  
 Function Get_SecurityGroup_ManagerName_AD {
  Param(
@@ -95,19 +86,12 @@ Function Get_SecurityGroup_ManagerName_AD {
 Process{
 try
 {
-       # $Onwer_Result =  Get-ADGroup $p_EntitlementName -Properties ManagedBy | % {Get-ADUser -Identity $_.managedBy} | select name
         $Onwer_Result = get-adgroup $p_EntitlementName -Server $ServerName -properties * | select-object extensionAttribute1
         $sPlit_Owner_Result = $Onwer_Result.extensionAttribute1  -split "," -replace "CN=", ""
         return $sPlit_Owner_Result[0] 
  }
  catch
     {
-        Write-Host $Error
-        $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
-        $MessageBody = "Dear Team,<br><br> Below is Details<br>"
-        $MessageBody += $Error
-        $Subject = "Line No: 269 - Error in Report SMT - " + $TodayDate
-         Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
         Exit
     }
     
@@ -125,12 +109,6 @@ try{
     }
      catch
     {
-        Write-Host $Error
-          $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
-        $MessageBody = "Dear Team,<br><br> Below is Details<br>"
-        $MessageBody += $Error
-        $Subject = "Line No: 291 - Error in Report SMT - " + $TodayDate
-         Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
         Exit
     }
     }
@@ -149,10 +127,8 @@ Param (
 
 $Split_RoleMembersfrom_Sailpoint | ForEach-Object {
     if ($Spilt_RoleMembersfrom_AD -notcontains $_) {
-       # Write-Host "`$array2 not contains the `$array1 string [$_]"
       $s_Compare_Result = $false
     }
-    #return $false
  }
 
 return $CompareResult
@@ -174,20 +150,11 @@ Process{
 
     $IDNFilter =  "?offset=$p_offset_Search_AP&limit=$p_Limit_Search_AP"
     TRY {
-       #  $sGetSearch_Results = Invoke-RestMethod -Uri $IDN_Search_API$IDNFilter -Method Post  -headers $headers
          $sGetSearch_Results = Invoke-RestMethod -Uri $IDN_Search_API$IDNFilter  -Method Post  -headers $headers -Body $p_body
  
     }
     CATCH 
     {
-        write-host -ForegroundColor White -BackgroundColor RED "Read_Search FAILED"
- 
-        Write-Host $Error
-        $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
-        $MessageBody = "Dear Team,<br><br> Below is Details<br>"
-        $MessageBody += $Error
-        $Subject = "Line No: 347 - Error in Report SMT - " + $TodayDate
-         Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
         Exit
     }
         return $sGetSearch_Results     
@@ -247,8 +214,6 @@ function Get-AccessProfile-Search {
                         Modified   = $accessProfileObj.modified              
                         Owner   = $accessProfileObj.owner                 
                         Entitlements   = $accessProfileObj.entitlements          
-                        # AccessRequestConfig  = $accessProfileObj.accessRequestConfig    
-                        #  RevocationRequestConfig  = $accessProfileObj.revocationRequestConfig
                         Segments   = $accessProfileObj.segments              
 
                         }
@@ -273,13 +238,6 @@ function Get-AccessProfile-Search {
             }
     }
     catch {
-        write-host -ForegroundColor White -BackgroundColor RED "Search FAILED"
-        Write-Host $Error
-        $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
-        $MessageBody = "Dear Team,<br><br> Below is Details<br>"
-        $MessageBody += $Error
-        $Subject = "Line No: 441 - Error in Report SMT - " + $TodayDate
-         Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
         Exit
     }
     return $sAccessProfileCollections
@@ -448,11 +406,9 @@ function Get-Role-Search-By-APID
 
   try {
         $sSearchResult_RO = Invoke-RestMethod $IDN_Search_API -Method POST -Headers $headers -Body $body_RO
-        #$sSearchResult_RO = Read_from_Search -p_offset_Search_AP $s_offset_Search_RO  -p_Limit_Search_AP $s_Limit_Search_RO -p_body $body_RO
         if($sSearchResult_RO.Count -gt 0)
         {
      
-          #  $s_offset_Search_RO = ($s_offset_Search_RO)+50
               foreach ($roleObj in $sSearchResult_RO) {
               try            
                { 
@@ -520,16 +476,6 @@ function Get-Role-Search-By-APID
                                  $sAP_Multiples_Names = $apObj.name
                                  $sAP_Multiples_Ids = $apObj.id
                             }
-                            # if($sAP_Multiples_Names -eq "")
-                            # {
-                            #     $sAP_Multiples_Names = $apObj.name
-                            #    $sAP_Multiples_Ids = $apObj.id
-                            #}
-                            #else
-                            # {
-                            #     $sAP_Multiples_Names =  $sAP_Multiples_Names + ";" +$apObj.name
-                            #     $sAP_Multiples_Ids =  $sAP_Multiples_Ids + ";" +  $apObj.id
-                            #}
                             }
                             if($sAP_Multiples_Names -eq "")
                             {
@@ -572,7 +518,6 @@ function Get-Role-Search-By-APID
                             }
                             else
                             {
-                             #$SecurityGroup_Member_AD =  Get_SecurityGroup_Members_AD -p_securityGroupName $p_AP_Name
                                $sEntitlement_Error = "No_Entitlement_Name"
                                $sEntitlement_ErrorMessage  = "error:no entitlement"
                             }
@@ -585,14 +530,6 @@ function Get-Role-Search-By-APID
                             }
                             else
                             {
-                             #  $DailyOwnershipReportArray = [System.Collections.ArrayList]@()
-                             #  $TodayDate_DailyOwnership =  (Get-Date).tostring("yyyy/MM/dd")
-                             #  $DailyOwnershipReportArray.Add($TodayDate_DailyOwnership) | Out-Null
-                             #  $DailyOwnershipReportArray.Add($p_EN_Name) | Out-Null
-                             #  $DailyOwnershipReportArray.Add($RoleOwner_Insim_From_SailPoint) | Out-Null 
-                             #  $DailyOwnershipReportArray.Add($Owner_Insim_From_AD) | Out-Null
-
-                             # Create_ListItem -p_ListName "Daily Ownership Comparison Report" -p_Values $DailyOwnershipReportArray -p_Type "DailyOwnershipComparisonReport"
                             }
 
                             if($sEntitlement_Error -eq "-")
@@ -601,7 +538,6 @@ function Get-Role-Search-By-APID
                                 {
                                   if(($sGetRole_Result | Measure-Object).Count -ge 0)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           {
-                                 # $mem_Email_Coll = ""
                                      $mem_Insim_Coll = ""
                                      $SG_Mem_Insim_Replace_Coll = ""
                                      $SG_Mem_Insim_Replace_Coll_WithoutReplace = ""
@@ -611,25 +547,17 @@ function Get-Role-Search-By-APID
                                       foreach ($memObj in $sGetRole_Result){                           
                                             if($mem_Insim_Coll -eq "")
                                                 {
-                                                   # $mem_Email_Coll = $memObj.email
-                                                  #  $mem_Insim_Coll = $memObj.attributes.uid
                                                   $mem_Insim_Coll = $memObj.attributes_uid
 
                                             }
                                             else
                                                 {
-                                                   # $mem_Email_Coll =  $mem_Email_Coll + ";" +$memObj.email
-                                                  #   $mem_Insim_Coll =  $mem_Insim_Coll + ";" +$memObj.attributes.uid
                                                      $mem_Insim_Coll =  $mem_Insim_Coll + ";" +$memObj.attributes_uid
 
                                             }
                                          }
                                          $Members = @{
-                                          #  DisplayName = $memObj.displayName
-                                          #  Id  = $memObj.id
-                                           # Email  =  $mem_Email_Coll
                                              InsimId=  $mem_Insim_Coll
-                                          #  RoleAssignmentSource = $memObj.roleAssignmentSource
                                           }
 
                                           if($SecurityGroup_Member_AD -ne "")
@@ -640,7 +568,6 @@ function Get-Role-Search-By-APID
                                                 if($SG_Mem_Insim_Coll -eq "")
                                                 {
                                                         $SG_Mem_Insim_Coll = $securityGroupMemObj.name
-                                                        #if(!$securityGroupMemObj.name.StartsWith("NPA") -and !$securityGroupMemObj.name.StartsWith("GRBPAC-JP"))
                                                         if((!$securityGroupMemObj.name.StartsWith("NPA")) -and (!$securityGroupMemObj.objectClass.StartsWith('group')))
                                                         {
                                                             if($p_Source_Name.EndsWith("LSA") -or $p_Source_Name.EndsWith("CSA")  -or $p_Source_Name.EndsWith("WSA"))
@@ -658,7 +585,6 @@ function Get-Role-Search-By-APID
                                                 else
                                                 {
                                                      $SG_Mem_Insim_Coll =  $SG_Mem_Insim_Coll + ";" +$securityGroupMemObj.name
-                                                     # if(!$securityGroupMemObj.name.StartsWith("NPA") -and !$securityGroupMemObj.name.StartsWith("GRBPAC-JP"))
                                                       if((!$securityGroupMemObj.name.StartsWith("NPA")) -and (!$securityGroupMemObj.objectClass.StartsWith('group')))
                                                       {
                                                         if($p_Source_Name.EndsWith("LSA") -or $p_Source_Name.EndsWith("CSA")  -or $p_Source_Name.EndsWith("WSA"))
@@ -694,9 +620,6 @@ function Get-Role-Search-By-APID
                                           }
                                            $Is_RoleMember_CheckResult = CompareRoleMembers -p_RoleMembersfrom_AD $SG_Mem_Insim_Replace_Coll  -p_RoleMembersfrom_Sailpoint $mem_Insim_Coll      
                                           
-                                           #####
-                                                                         
-                                          # $Is_RoleMember_CheckResult =
                                            $s_NotIn_AD =""
                                            $s_NotIn_Sailpoint =""
                                            $Is_RoleMember_Same = $false
@@ -732,7 +655,6 @@ function Get-Role-Search-By-APID
                                                                 }
                                                                 if($s_NotIn_Sailpoint -eq "")
                                                                 {
-                                                                  #  $s_NotIn_Sailpoint = $s_Append_AccountType+$s_Cmp_Result.InputObject
                                                                      $s_Get_Actual_ID = $SG_Mem_Insim_Replace_Coll_WithoutReplace -split ";"
                                                                    if($s_Cmp_Result.InputObject.StartsWith("LSA"))
                                                                     {
@@ -762,7 +684,6 @@ function Get-Role-Search-By-APID
                                                                 }
                                                                 else
                                                                 {
-                                                                  #  $s_NotIn_Sailpoint =  $s_NotIn_Sailpoint + ";" +$s_Append_AccountType+$s_Cmp_Result.InputObject
                                                                     $s_Get_Actual_ID = $SG_Mem_Insim_Replace_Coll_WithoutReplace -split ";"
                                                                    if($s_Cmp_Result.InputObject.StartsWith("LSA"))
                                                                     {
@@ -803,19 +724,6 @@ function Get-Role-Search-By-APID
                                                }
                                                else
                                                {
-                                                #$Split_s_NotIn_Sailpoint = $s_NotIn_Sailpoint -split ";"
-                                                #$Split_s_NotIn_Sailpoint | ForEach-Object {
-                                                #$Split_s_NotIn_Sailpoint_Text =$_
-                                                    #    $get_AD_fromLists =  $ADUsers | Where-Object{(  $_.SamAccountName  -eq $Split_s_NotIn_Sailpoint_Text) -or (  $_.SamAccountName  -eq ($Split_s_NotIn_Sailpoint_Text -replace "LSA", "")  -or  $_.SamAccountName  -eq ($Split_s_NotIn_Sailpoint_Text -replace "CSA", "")  -or   $_.SamAccountName  -eq ($Split_s_NotIn_Sailpoint_Text -replace "WSA", ""))}
-                                                    #    $UserUsageReportArray = [System.Collections.ArrayList]@()
-                                                    #    $TodayDate_User =  (Get-Date).tostring("yyyy/MM/dd")
-                                                    #    $UserUsageReportArray.Add($TodayDate_User) | Out-Null
-                                                    #    $UserUsageReportArray.Add($get_AD_fromLists.Description) | Out-Null
-                                                    #    $UserUsageReportArray.Add($Split_s_NotIn_Sailpoint_Text) | Out-Null
-                                                    #    $UserUsageReportArray.Add($roleObj.name) | Out-Null
-                                                    #    $UserUsageReportArray.Add($p_EN_Name) | Out-Null
-                                                    #    Create_ListItem -p_ListName "Daily IDN Usage Report" -p_Values $UserUsageReportArray -p_Type "DailyIDNUsageReport"
-                                                   #}
                                                }
                                              
                                             $s_SG_MembersCollections.add( (New-Object psobject -Property $SG_Members)) | Out-Null
@@ -874,16 +782,10 @@ function Get-Role-Search-By-APID
                                         IsRoleMemberMatch =$Is_RoleMember_Same
                                         MemberListsNotinAD = $s_NotIn_AD
                                         MemberListsNotinSailPoint = $s_NotIn_Sailpoint.Trim(';')
-                                        # Mmbership               =  $roleObj.membership
-                                        # LegacyMembershipInfo    =  $roleObj.legacyMembershipInfo
-                                        # AccessRequestConfig     =  $roleObj.accessRequestConfig
-                                        # RevocationRequestConfig =  $roleObj.revocationRequestConfig
                                         Segments                =  $roleObj.segments
                                 }
 
                         $gRolesCollections.add((New-Object psobject -Property $properties)) | Out-Null
-                      #  $SQLInsertQuery   =  fn_getInsertQuery  -sValues $properties -sSourceName $p_Source_Name -sReportType "IAMReport"
-                       # fn_ExecuteInsertyQuery -SQLInsertQuery $SQLInsertQuery 
                 }
                }
               catch {
@@ -912,10 +814,6 @@ function Get-Role-Search-By-APID
         Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
         Exit
     }
-
-  #  $result | ConvertTo-Json
-    #$result.Count
-
 }
 
 Function Get-IDN-Roles()
@@ -928,15 +826,9 @@ Function Get-IDN-Roles()
         TRY
         {
         $gRolesCollections.Clear()
-         #  fn_ExecuteDeleteQuery Automation_IAM_ReconciliationReport
         $results_AccessProfile =  Get-AccessProfile-Search -p_Source_Name $pSourceName
          for ($i = $results_AccessProfile.Count -1; $i -ge 0; $i--) {
-          # Write-Host  $results_AccessProfile[$i].id 
-               #Get-Role-Search-By-APID -p_Source_Name $pSourceName -p_AP_ID  $results_AccessProfile[$i].id -IsRoleMembers $IsRoleMembers -p_EN_Name $results_AccessProfile[$i].Entitlements[0].name -p_EN_ID $results_AccessProfile[$i].Entitlements[0].id -p_AP_Owner_ID $results_AccessProfile[$i].Owner.id
-       # if( $results_AccessProfile[$i].id -eq "2c9180847c1b8b4c017c2630c3ae0521")
-        #     {
                Get-Role-Search-By-APID -p_Source_Name $pSourceName -p_AP_ID  $results_AccessProfile[$i].id -IsRoleMembers $IsRoleMembers -p_EN_Name $results_AccessProfile[$i].Entitlements[0].name -p_EN_ID $results_AccessProfile[$i].Entitlements[0].id -p_AP_Owner_ID $results_AccessProfile[$i].Owner.id -p_AP_Description $results_AccessProfile[$i].Description -p_AP_SegmentName $results_AccessProfile[$i].Segments[0].name -p_AP_Name $results_AccessProfile[$i].Name
-         #     }
             }
         }
         CATCH {
@@ -955,17 +847,9 @@ Function Get-IDN-Roles()
 
 Try{
 Get-ChildItem -Path "C:\Automation\Team\Prakash\SMT\Report\" -File | Remove-Item -InformationAction Ignore
-#Get-ChildItem -Path "C:\Automation\IAM\BaseReport\Report\FullList\" -File | Remove-Item -InformationAction Ignore
 }
  catch
  {
-    #Send mail with error message
-        #send emaillo
-     $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
-        $MessageBody = "Dear Team,<br><br> Below is Details<br>"
-        $MessageBody += $Error
-        $Subject = "Line No: 1138 - Error in Report SMT - " + $TodayDate
-        Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
         Exit
  }
 
@@ -982,27 +866,17 @@ Write-host  "IAM Reconcilliation Script - Source : " $sSourceName " Started"
     {
         if(($sResponse_ReadRoles_Output | Measure-Object).Count -ge 0)
         {
-           # Create_ListItem -p_ListName $IdentityNowRolesInformation_ListName -p_ListId $IdentityNowRolesInformation_ListId -p_ValueS $sResponse_ReadRoles_Output -p_Type "RoleInformation" -p_SourceName $sSourceName
         }
         else
         {
-           # write-host $sResponse_ReadRoles_Output
         }
     }
 Write-host  "IAM Reconcilliation Script - Source : " $sSourceName " Completed"
 }
-#Move-Item -Path C:\Automation\IAM\BaseReport\Report\$Excel_File_Name -Destination "C:\Automation\IAM\BaseReport\Report\FullList\FullList.xlsx"
 $s_IAM_ReconciliationReport_ExecutionStatus =  "Execution Completed"
  }
  catch
  {
-    #Send mail with error message
-        #send emaillo
-        $s_IAM_ReconciliationReport_ExecutionStatus =  "Error"
-        $MessageBody = "Dear Team,<br><br> Below is Details<br>"
-        $MessageBody += $Error
-        $Subject = "Line No: 1183 - Error in Report SMT - " + $TodayDate
-        Send-EmailNotification_StakeHolders -body $MessageBody  -subject $Subject
  }
 
 $gRolesCollections.Clear()
