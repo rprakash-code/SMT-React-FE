@@ -1,25 +1,151 @@
-select SourceName
-RoleID
-RoleName
-RoleDescription
-RoleOwnerName
-RoleOwnerInsimID
-RoleEnabled
-AccessProfileId
-AccessProfileName
-AccessProfileDescription
-EntitlementName
-EntitlementId
-RoleMembersFromSailPoint
-ADGroupMembership
-AccessProfileOwners
-SecurityGroupOwners
-IsOwnerMatch
-IsRoleMemberMatch
-MembersADDtoAD
-MembersRemoveFromAD
-AccessProfileSegmentName
-from [Automation_IAM_ReconciliationReport] where RoleEnabled = 1 and  EntitlementName = 'GRAPAC-JP-PYTHON-EN'
+public class ReconciliationReport
+{
+    public string SourceName { get; set; }
+    public int RoleID { get; set; }
+    public string RoleName { get; set; }
+    public string RoleDescription { get; set; }
+    public string RoleOwnerName { get; set; }
+    public string RoleOwnerInsimID { get; set; }
+    public bool RoleEnabled { get; set; }
+    public int AccessProfileId { get; set; }
+    public string AccessProfileName { get; set; }
+    public string AccessProfileDescription { get; set; }
+    public string EntitlementName { get; set; }
+    public int EntitlementId { get; set; }
+    public string RoleMembersFromSailPoint { get; set; }
+    public string ADGroupMembership { get; set; }
+    public string AccessProfileOwners { get; set; }
+    public string SecurityGroupOwners { get; set; }
+    public bool IsOwnerMatch { get; set; }
+    public bool IsRoleMemberMatch { get; set; }
+    public bool MembersADDtoAD { get; set; }
+    public bool MembersRemoveFromAD { get; set; }
+    public string AccessProfileSegmentName { get; set; }
+}
 
- 
+
+
+using Azure.Identity;
+using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+
+public interface IReconciliationService
+{
+    Task<IEnumerable<ReconciliationReport>> GetReconciliationDataAsync(string entitlementName);
+}
+
+public class ReconciliationService : IReconciliationService
+{
+    private readonly IConfiguration _configuration;
+
+    public ReconciliationService(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public async Task<IEnumerable<ReconciliationReport>> GetReconciliationDataAsync(string entitlementName)
+    {
+        var results = new List<ReconciliationReport>();
+
+        var connectionString = _configuration.GetConnectionString("AzureSqlConnection");
+
+        // Use DefaultAzureCredential for Managed Identity
+        var credential = new DefaultAzureCredential();
+        var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "https://database.windows.net/.default" });
+        var accessToken = await credential.GetTokenAsync(tokenRequestContext);
+
+        using (var connection = new SqlConnection(connectionString))
+        {
+            connection.AccessToken = accessToken.Token;
+            await connection.OpenAsync();
+
+            var query = @"
+                SELECT 
+                    SourceName, RoleID, RoleName, RoleDescription, RoleOwnerName, 
+                    RoleOwnerInsimID, RoleEnabled, AccessProfileId, AccessProfileName, 
+                    AccessProfileDescription, EntitlementName, EntitlementId, 
+                    RoleMembersFromSailPoint, ADGroupMembership, AccessProfileOwners, 
+                    SecurityGroupOwners, IsOwnerMatch, IsRoleMemberMatch, 
+                    MembersADDtoAD, MembersRemoveFromAD, AccessProfileSegmentName
+                FROM Automation_IAM_ReconciliationReport
+                WHERE RoleEnabled = 1 AND EntitlementName = @EntitlementName";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.Add(new SqlParameter("@EntitlementName", SqlDbType.NVarChar) { Value = entitlementName });
+
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var report = new ReconciliationReport
+                        {
+                            SourceName = reader["SourceName"].ToString(),
+                            RoleID = Convert.ToInt32(reader["RoleID"]),
+                            RoleName = reader["RoleName"].ToString(),
+                            RoleDescription = reader["RoleDescription"].ToString(),
+                            RoleOwnerName = reader["RoleOwnerName"].ToString(),
+                            RoleOwnerInsimID = reader["RoleOwnerInsimID"].ToString(),
+                            RoleEnabled = Convert.ToBoolean(reader["RoleEnabled"]),
+                            AccessProfileId = Convert.ToInt32(reader["AccessProfileId"]),
+                            AccessProfileName = reader["AccessProfileName"].ToString(),
+                            AccessProfileDescription = reader["AccessProfileDescription"].ToString(),
+                            EntitlementName = reader["EntitlementName"].ToString(),
+                            EntitlementId = Convert.ToInt32(reader["EntitlementId"]),
+                            RoleMembersFromSailPoint = reader["RoleMembersFromSailPoint"].ToString(),
+                            ADGroupMembership = reader["ADGroupMembership"].ToString(),
+                            AccessProfileOwners = reader["AccessProfileOwners"].ToString(),
+                            SecurityGroupOwners = reader["SecurityGroupOwners"].ToString(),
+                            IsOwnerMatch = Convert.ToBoolean(reader["IsOwnerMatch"]),
+                            IsRoleMemberMatch = Convert.ToBoolean(reader["IsRoleMemberMatch"]),
+                            MembersADDtoAD = Convert.ToBoolean(reader["MembersADDtoAD"]),
+                            MembersRemoveFromAD = Convert.ToBoolean(reader["MembersRemoveFromAD"]),
+                            AccessProfileSegmentName = reader["AccessProfileSegmentName"].ToString()
+                        };
+
+                        results.Add(report);
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+}
+
+
+
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ReconciliationController : ControllerBase
+{
+    private readonly IReconciliationService _reconciliationService;
+
+    public ReconciliationController(IReconciliationService reconciliationService)
+    {
+        _reconciliationService = reconciliationService;
+    }
+
+    [HttpGet("{entitlementName}")]
+    public async Task<IActionResult> GetReconciliationReport(string entitlementName)
+    {
+        if (string.IsNullOrWhiteSpace(entitlementName))
+            return BadRequest("Entitlement Name is required.");
+
+        var data = await _reconciliationService.GetReconciliationDataAsync(entitlementName);
+
+        if (data == null || !data.Any())
+            return NotFound("No data found for the given Entitlement Name.");
+
+        return Ok(data);
+    }
+}
+builder.Services.AddScoped<IReconciliationService, ReconciliationService>();
+
+
 
