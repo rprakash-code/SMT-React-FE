@@ -149,3 +149,14 @@ builder.Services.AddScoped<IReconciliationService, ReconciliationService>();
 
 
 
+builder.Services.AddSingleton(new IAMReconciliationService(
+       configuration["AzureAd:TenantId"],
+       configuration["AzureAd:AzureSQLClientId"],
+       configuration["AzureAd:AzureSQLClientSecret"],
+       configuration["ConnectionStrings:SqlDatabaseUrl"],
+       configuration["ConnectionStrings:Instance"],
+       configuration["ConnectionStrings:Domain"],
+       configuration["ConnectionStrings:SqlDatabaseUrl"]
+   ));
+
+builder.Services.AddSingleton<IAMReconciliationService>();
