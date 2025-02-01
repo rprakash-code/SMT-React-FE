@@ -57,4 +57,5 @@ public class ReconciliationController : ControllerBase
     }
 }
 
-
+SELECT Description, Department, Mail,  CASE WHEN Description LIKE '%removed%' THEN 'Inactive'  ELSE 'Active'  END AS Status  
+FROM ActiveDirectoryUsers   WHERE Name = 'sz49YW'
