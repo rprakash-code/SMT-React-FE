@@ -1,3 +1,90 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = $"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = $"https://sts.windows.net/{builder.Configuration["AzureAd:TenantId"]}/",
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["AzureAd:ClientId"],
+            ValidateLifetime = true
+        };
+    });
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+
+
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Graph;
+using Microsoft.Identity.Client;
+using System.Net.Http.Headers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class SSOController : ControllerBase
+{
+    private readonly IConfiguration _configuration;
+
+    public SSOController(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    [HttpGet("user")]
+    [Authorize]
+    public async Task<IActionResult> GetUserProfile()
+    {
+        var accessToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+        var client = new GraphServiceClient(
+            new DelegateAuthenticationProvider(async (requestMessage) =>
+            {
+                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            })
+        );
+
+        var user = await client.Me.Request().GetAsync();
+        return Ok(new
+        {
+            user.DisplayName,
+            user.Mail,
+            user.UserPrincipalName
+        });
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const msalConfig = {
     auth: {
         clientId: "YOUR_CLIENT_ID",
