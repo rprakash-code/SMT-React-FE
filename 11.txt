@@ -1,61 +1,172 @@
-  public string TenantId { get; set; }
-        public string AzureSQLClientId { get; set; }
-        public string AzureSQLClientSecret { get; set; }
-        public string SqlDatabaseUrl { get; set; }
-        public string Instance { get; set; }
-        public string Domain { get; set; }
-		
-		
-		// Register the Settings class
-builder.Services.Configure<IAMSettings>(builder.Configuration.GetSection("IAMSettings"));
+from flask import Flask
+from routes.user_routes import user_blueprint
 
-// Register your service
-builder.Services.AddScoped<IAMReconciliationService>();
+app = Flask(__name__)
+app.register_blueprint(user_blueprint, url_prefix='/api/users')
 
+@app.route('/')
+def home():
+    return {"message": "Welcome to the Python API!"}
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
 
 
 
-using Microsoft.Extensions.Options;
-using YourProject.Settings; // Add this namespace
 
-public class IAMReconciliationService
-{
-    private readonly IAMSettings _settings;
 
-    public IAMReconciliationService(IOptions<IAMSettings> settings)
-    {
-        _settings = settings.Value; // This will auto-bind the appsettings.json values
+from flask import Blueprint, request, jsonify
+from services.user_service import get_user_details
+
+user_blueprint = Blueprint('users', __name__)
+
+@user_blueprint.route('/', methods=['GET'])
+def get_users():
+    return jsonify({"success": True, "message": "User list will be here soon!"})
+
+@user_blueprint.route('/<username>', methods=['GET'])
+def user_details(username):
+    user = get_user_details(username)
+    if user:
+        return jsonify({"success": True, "user": user})
+    else:
+        return jsonify({"error": "User not found"}), 404
+
+
+
+
+
+def get_user_details(username):
+    fake_users = {
+        "john": {"name": "John Doe", "email": "john@example.com"},
+        "jane": {"name": "Jane Doe", "email": "jane@example.com"}
     }
+    return fake_users.get(username)
 
-    public void ConnectToDatabase()
-    {
-        Console.WriteLine($"Connecting to {_settings.SqlDatabaseUrl} with Client ID: {_settings.AzureSQLClientId}");
+
+
+import unittest
+from app import app
+
+class UserAPITestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = app.test_client()
+
+    def test_home(self):
+        response = self.app.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Welcome to the Python API!", response.data)
+
+    def test_user_not_found(self):
+        response = self.app.get('/api/users/unknown')
+        self.assertEqual(response.status_code, 404)
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+
+
+
+
+python -m unittest discover tests
+
+
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+secret_key = os.getenv("SECRET_KEY")
+
+
+
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# 1. Software Package Details API
+@app.route("/software-details", methods=["GET"])
+def handle_software_details():
+    username = request.args.get("username")
+    email = request.args.get("email")
+
+    if not username or not email:
+        return jsonify({"error": "Username and email are required"}), 400
+
+    response = {
+        "success": True,
+        "username": username,
+        "email": email,
+        "software": [
+            {
+                "name": "GoLang",
+                "description": "A statically typed, compiled programming language designed for simplicity and performance.",
+                "version": "1.20.3",
+                "link": "https://golang.org",
+            },
+            {
+                "name": "Visual Studio Code",
+                "description": "A lightweight code editor with support for various languages.",
+                "version": "1.76.2",
+                "link": "https://code.visualstudio.com/",
+            },
+        ],
     }
-}
+    return jsonify(response)
 
+# 2. Autocomplete API
+@app.route("/autocomplete", methods=["GET"])
+def handle_autocomplete():
+    query = request.args.get("q", "").lower()
+    usernames = [
+        {"username": "johndoe", "email": "johndoe@example.com"},
+        {"username": "janedoe", "email": "janedoe@example.com"},
+        {"username": "johnsmith", "email": "johnsmith@example.com"},
+        {"username": "janesmith", "email": "janesmith@example.com"},
+    ]
 
+    results = [user for user in usernames if query in user["username"].lower() or query in user["email"].lower()]
 
+    return jsonify({"success": True, "results": results})
 
-using Microsoft.AspNetCore.Mvc;
+# 3. Post User Details API
+@app.route("/post-user-details", methods=["POST"])
+def handle_post_user_details():
+    if request.method != "POST":
+        return jsonify({"error": "Invalid request method"}), 405
 
-[ApiController]
-[Route("api/[controller]")]
-public class ReconciliationController : ControllerBase
-{
-    private readonly IAMReconciliationService _reconciliationService;
+    try:
+        request_body = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON payload"}), 400
 
-    public ReconciliationController(IAMReconciliationService reconciliationService)
-    {
-        _reconciliationService = reconciliationService;
+    response = {
+        "success": True,
+        "message": "User details received",
+        "details": request_body,
     }
+    return jsonify(response)
 
-    [HttpGet]
-    public IActionResult TestConnection()
-    {
-        _reconciliationService.ConnectToDatabase();
-        return Ok("Connection test executed successfully.");
+# 4. ServiceNow Ticket Details API
+@app.route("/servicenow-tickets", methods=["GET"])
+def handle_servicenow_tickets():
+    username = request.args.get("username")
+
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+
+    response = {
+        "success": True,
+        "username": username,
+        "tickets": [
+            {"ticket_id": "INC0012345", "status": "Resolved", "description": "System issue resolved."},
+            {"ticket_id": "INC0012346", "status": "Open", "description": "Pending network configuration."},
+        ],
     }
-}
+    return jsonify(response)
 
-SELECT Description, Department, Mail,  CASE WHEN Description LIKE '%removed%' THEN 'Inactive'  ELSE 'Active'  END AS Status  
-FROM ActiveDirectoryUsers   WHERE Name = 'sz49YW'
+# Run the server
+if __name__ == "__main__":
+    print("Server is running on port 8080")
+    app.run(host="0.0.0.0", port=8080)
