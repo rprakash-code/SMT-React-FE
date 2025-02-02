@@ -1,36 +1,6 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Graph;
-using System.Threading.Tasks;
-
-[Route("api/auth")]
-[ApiController]
-public class AuthController : ControllerBase
-{
-    private readonly GraphService _graphService;
-
-    public AuthController(GraphService graphService)
-    {
-        _graphService = graphService;
-    }
-
-    [Authorize]
-    [HttpGet("me")]
-    public async Task<IActionResult> GetUser()
-    {
-        try
-        {
-            var user = await _graphService.GetUserDetailsAsync();
-            return Ok(new
-            {
-                user.DisplayName,
-                user.Mail,
-                user.UserPrincipalName
-            });
-        }
-        catch (ServiceException ex)
-        {
-            return StatusCode((int)ex.StatusCode, new { error = ex.Message });
-        }
-    }
-}
+https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+  ?client_id=your-client-id
+  &response_type=code
+  &redirect_uri=http://localhost:5000/
+  &scope=openid profile user.read
+  &state=12345
