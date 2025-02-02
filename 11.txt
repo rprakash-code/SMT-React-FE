@@ -1,115 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { PublicClientApplication, InteractionRequiredAuthError } from "@azure/msal-browser";
-import { msalConfig, loginRequest } from "./authConfig"; // Import MSAL config
-import axios from "axios";
+https://login.microsoftonline.com/
+fed95e69-8d73-43fe-affb-a7d85ede36fb/oauth2/v2.0/authorize?
+client_id=2ad1c352-735c-4e28-a7f7-8c8dad49d792
+&response_type=code
+&redirect_uri=https://localhost:7241/
+&scope=openid profile user.read
+&state=12345
 
-let pca: PublicClientApplication;
 
-const App = () => {
-  const [userInfo, setUserInfo] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isMsalInitialized, setIsMsalInitialized] = useState(false); // Track if MSAL is initialized
-  const [isLoggingIn, setIsLoggingIn] = useState(false); // Track if login is in progress
+https://login.microsoftonline.com/fed95e69-8d73-43fe-affb-a7d85ede36fb/oauth2/v2.0/token
 
-  // Initialize MSAL client app when component mounts
-  useEffect(() => {
-    async function initializeMSAL() {
-      try {
-        // Create an instance of PublicClientApplication
-        pca = new PublicClientApplication(msalConfig);
-
-        // Mark MSAL as initialized
-        setIsMsalInitialized(true);
-
-        // Check if there are any active accounts (user already signed in)
-        const accounts = pca.getAllAccounts();
-        if (accounts.length > 0) {
-          await getUserDetails(); // If user is signed in, fetch user details
-        }
-      } catch (err) {
-        setError("Error initializing MSAL: " + err.message);
-      }
-    }
-
-    initializeMSAL();
-  }, []);
-
-  const handleLogin = async () => {
-    if (!isMsalInitialized) {
-      setError("MSAL is not initialized yet.");
-      return;
-    }
-
-    setIsLoggingIn(true); // Set login status to true
-
-    try {
-      // Use loginPopup() for interactive login
-      const loginResponse = await pca.loginPopup(loginRequest);
-
-      // Extract the access token
-      const accessToken = loginResponse.accessToken;
-
-      // Fetch user details from the backend (use access token for authorization)
-      const userResponse = await axios.get("http://localhost:5000/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      setUserInfo(userResponse.data); // Store the user info in state
-      setIsLoggingIn(false); // Set login status to false after login
-    } catch (err) {
-      setIsLoggingIn(false); // Set login status to false if error occurs
-
-      if (err instanceof InteractionRequiredAuthError) {
-        setError("Authentication requires interaction.");
-      } else {
-        setError("Login failed! " + err.message);
-      }
-    }
-  };
-
-  const getUserDetails = async () => {
-    try {
-      const accounts = pca.getAllAccounts();
-      if (accounts.length > 0) {
-        const currentAccount = accounts[0];
-        const accessTokenResponse = await pca.acquireTokenSilent({
-          ...loginRequest,
-          account: currentAccount,
-        });
-
-        // Use the access token to fetch user details from the backend
-        const userResponse = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${accessTokenResponse.accessToken}`,
-          },
-        });
-
-        setUserInfo(userResponse.data);
-      }
-    } catch (err) {
-      setError("Error getting user details: " + err.message);
-    }
-  };
-
-  return (
-    <div>
-      <h2>Login with Microsoft</h2>
-      {!userInfo ? (
-        <button onClick={handleLogin} disabled={isLoggingIn}>
-          {isLoggingIn ? "Logging in..." : "Login"}
-        </button>
-      ) : (
-        <div>
-          <h3>Welcome {userInfo.displayName}</h3>
-          <p>Email: {userInfo.mail}</p>
-        </div>
-      )}
-
-      {error && <div>{error}</div>}
-    </div>
-  );
-};
-
-export default App;
+https://graph.microsoft.com/v1.0/me
