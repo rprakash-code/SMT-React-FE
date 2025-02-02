@@ -9,20 +9,36 @@ let pca: PublicClientApplication;
 const App = () => {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isMsalInitialized, setMsalInitialized] = useState(false); // Track MSAL initialization
 
   // Initialize MSAL client app on component mount
   useEffect(() => {
-    pca = new PublicClientApplication(msalConfig);
+    async function initializeMSAL() {
+      try {
+        pca = new PublicClientApplication(msalConfig);
 
-    // Check if there's already an authenticated account
-    const checkAccount = pca.getAllAccounts();
-    if (checkAccount.length > 0) {
-      // Automatically sign in if there's an active session
-      getUserDetails();
+        // Check if any account is already authenticated
+        const accounts = pca.getAllAccounts();
+        if (accounts.length > 0) {
+          // If an account is already signed in, try to get user details silently
+          await getUserDetails();
+        }
+
+        setMsalInitialized(true); // Mark MSAL as initialized
+      } catch (error) {
+        setError("MSAL Initialization failed: " + error.message);
+      }
     }
+
+    initializeMSAL();
   }, []);
 
   const handleLogin = async () => {
+    if (!isMsalInitialized) {
+      setError("MSAL is not initialized yet.");
+      return;
+    }
+
     try {
       // Perform login using MSAL popup method
       const loginResponse = await pca.loginPopup(loginRequest);
