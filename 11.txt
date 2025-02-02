@@ -1,26 +1,36 @@
-using Azure.Identity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Graph;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-public class GraphService
+[Route("api/auth")]
+[ApiController]
+public class AuthController : ControllerBase
 {
-    private readonly GraphServiceClient _graphClient;
+    private readonly GraphService _graphService;
 
-    public GraphService(IConfiguration configuration)
+    public AuthController(GraphService graphService)
     {
-        var clientId = configuration["AzureAd:ClientId"];
-        var clientSecret = configuration["AzureAd:ClientSecret"];
-        var tenantId = configuration["AzureAd:TenantId"];
-
-        var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-        var authProvider = new TokenCredentialAuthProvider(credential);
-
-        _graphClient = new GraphServiceClient(authProvider);
+        _graphService = graphService;
     }
 
-    public async Task<User> GetUserDetailsAsync()
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetUser()
     {
-        return await _graphClient.Me.Request().GetAsync();
+        try
+        {
+            var user = await _graphService.GetUserDetailsAsync();
+            return Ok(new
+            {
+                user.DisplayName,
+                user.Mail,
+                user.UserPrincipalName
+            });
+        }
+        catch (ServiceException ex)
+        {
+            return StatusCode((int)ex.StatusCode, new { error = ex.Message });
+        }
     }
 }
