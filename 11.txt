@@ -3,30 +3,30 @@ import { PublicClientApplication, InteractionRequiredAuthError } from "@azure/ms
 import { msalConfig, loginRequest } from "./authConfig"; // Import MSAL config
 import axios from "axios";
 
-// Declare MSAL Client Application instance
 let pca: PublicClientApplication;
 
 const App = () => {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isMsalInitialized, setMsalInitialized] = useState(false); // Track MSAL initialization
+  const [isMsalInitialized, setIsMsalInitialized] = useState(false); // Track if MSAL is initialized
 
-  // Initialize MSAL client app on component mount
+  // Initialize MSAL client app when component mounts
   useEffect(() => {
     async function initializeMSAL() {
       try {
+        // Create an instance of PublicClientApplication
         pca = new PublicClientApplication(msalConfig);
 
-        // Check if any account is already authenticated
+        // Mark MSAL as initialized
+        setIsMsalInitialized(true);
+
+        // Check if there are any active accounts (user already signed in)
         const accounts = pca.getAllAccounts();
         if (accounts.length > 0) {
-          // If an account is already signed in, try to get user details silently
-          await getUserDetails();
+          await getUserDetails(); // If user is signed in, fetch user details
         }
-
-        setMsalInitialized(true); // Mark MSAL as initialized
-      } catch (error) {
-        setError("MSAL Initialization failed: " + error.message);
+      } catch (err) {
+        setError("Error initializing MSAL: " + err.message);
       }
     }
 
@@ -40,19 +40,20 @@ const App = () => {
     }
 
     try {
-      // Perform login using MSAL popup method
+      // Use loginPopup() for interactive login
       const loginResponse = await pca.loginPopup(loginRequest);
-      const accessToken = loginResponse.accessToken; // Access token returned by Microsoft
 
-      // Now call the backend API to get user info (e.g. /api/auth/me)
+      // Extract the access token
+      const accessToken = loginResponse.accessToken;
+
+      // Fetch user details from the backend (use access token for authorization)
       const userResponse = await axios.get("http://localhost:5000/api/auth/me", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
 
-      // Store user data in state
-      setUserInfo(userResponse.data);
+      setUserInfo(userResponse.data); // Store the user info in state
     } catch (err) {
       if (err instanceof InteractionRequiredAuthError) {
         setError("Authentication requires interaction.");
@@ -72,14 +73,13 @@ const App = () => {
           account: currentAccount,
         });
 
-        // Use access token to fetch user details from backend or Graph API
+        // Use the access token to fetch user details from the backend
         const userResponse = await axios.get("http://localhost:5000/api/auth/me", {
           headers: {
             Authorization: `Bearer ${accessTokenResponse.accessToken}`,
           },
         });
 
-        // Store user data
         setUserInfo(userResponse.data);
       }
     } catch (err) {
