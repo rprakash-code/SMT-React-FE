@@ -1,13 +1,91 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import "./index.css";
-import App from "./App";
-import { BrowserRouter as Router } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { PublicClientApplication, Configuration, InteractionRequiredAuthError } from "@azure/msal-browser";
+import { msalConfig, loginRequest } from "./authConfig"; // Import MSAL config
+import axios from "axios";
 
-// Render App component into the root div
-ReactDOM.render(
-  <Router>
-    <App />
-  </Router>,
-  document.getElementById("root")
-);
+// Declare MSAL Client Application instance
+let pca: PublicClientApplication;
+
+const LoginPage = () => {
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize MSAL client app on component mount
+  useEffect(() => {
+    pca = new PublicClientApplication(msalConfig);
+
+    // This can be used for silent login if already authenticated
+    const checkAccount = pca.getAllAccounts();
+    if (checkAccount.length > 0) {
+      // Automatically sign in if there's an active session
+      getUserDetails();
+    }
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      // Perform login using MSAL popup method
+      const loginResponse = await pca.loginPopup(loginRequest);
+      const accessToken = loginResponse.accessToken; // Access token returned by Microsoft
+
+      // Now call the backend API to get user info (e.g. /api/auth/me)
+      const userResponse = await axios.get("http://localhost:5000/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // Store user data in state
+      setUserInfo(userResponse.data);
+    } catch (err) {
+      if (err instanceof InteractionRequiredAuthError) {
+        setError("Authentication requires interaction.");
+      } else {
+        setError("Login failed! " + err.message);
+      }
+    }
+  };
+
+  const getUserDetails = async () => {
+    try {
+      const accounts = pca.getAllAccounts();
+      if (accounts.length > 0) {
+        const currentAccount = accounts[0];
+        const accessTokenResponse = await pca.acquireTokenSilent({
+          ...loginRequest,
+          account: currentAccount,
+        });
+
+        // Use access token to fetch user details from backend or Graph API
+        const userResponse = await axios.get("http://localhost:5000/api/auth/me", {
+          headers: {
+            Authorization: `Bearer ${accessTokenResponse.accessToken}`,
+          },
+        });
+
+        // Store user data
+        setUserInfo(userResponse.data);
+      }
+    } catch (err) {
+      setError("Error getting user details: " + err.message);
+    }
+  };
+
+  return (
+    <div>
+      <h2>Login with Microsoft</h2>
+      <button onClick={handleLogin}>Login</button>
+
+      {error && <div>{error}</div>}
+
+      {userInfo && (
+        <div>
+          <h3>Welcome {userInfo.displayName}</h3>
+          <p>Email: {userInfo.mail}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LoginPage;
