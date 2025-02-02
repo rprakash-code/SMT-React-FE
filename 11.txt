@@ -1,23 +1,129 @@
-API Endpoints 
-Software Details:
+export const msalConfig = {
+    auth: {
+        clientId: "YOUR_CLIENT_ID",
+        authority: "https://login.microsoftonline.com/YOUR_TENANT_ID",
+        redirectUri: "http://localhost:3000",
+    },
+    cache: {
+        cacheLocation: "localStorage",
+        storeAuthStateInCookie: false,
+    }
+};
+
+export const loginRequest = {
+    scopes: ["openid", "profile", "email", "User.Read"]
+};
 
 
-curl "http://localhost:8080/software-details?username=john&email=john@example.com"
-Autocomplete:
+
+import React from "react";
+import { MsalProvider, useMsal, useIsAuthenticated } from "@azure/msal-react";
+import { PublicClientApplication, AuthenticationResult, AccountInfo } from "@azure/msal-browser";
+import { msalConfig, loginRequest } from "./authConfig";
+import axios from "axios";
+import "./App.css";
+
+// Initialize MSAL instance
+const msalInstance = new PublicClientApplication(msalConfig);
+
+// Login Component
+const LoginButton: React.FC = () => {
+    const { instance } = useMsal();
+
+    const handleLogin = async () => {
+        try {
+            await instance.loginPopup(loginRequest);
+        } catch (error) {
+            console.error("Login Error:", error);
+        }
+    };
+
+    return <button onClick={handleLogin}>Login with Azure SSO</button>;
+};
+
+// User Profile Component
+const UserProfile: React.FC = () => {
+    const { instance, accounts } = useMsal();
+    const isAuthenticated = useIsAuthenticated();
+
+    const getProfile = async () => {
+        if (isAuthenticated && accounts.length > 0) {
+            try {
+                const account: AccountInfo = accounts[0];
+
+                const response: AuthenticationResult = await instance.acquireTokenSilent({
+                    ...loginRequest,
+                    account,
+                });
+
+                const accessToken = response.accessToken;
+
+                const apiResponse = await axios.get("https://localhost:5001/api/sso/user", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                });
+
+                alert(`Welcome, ${apiResponse.data.displayName}`);
+                console.log("User Profile:", apiResponse.data);
+            } catch (error) {
+                console.error("Profile Fetch Error:", error);
+            }
+        }
+    };
+
+    return isAuthenticated ? (
+        <div>
+            <button onClick={getProfile}>Get My Profile</button>
+        </div>
+    ) : null;
+};
+
+// App Component
+const App: React.FC = () => {
+    return (
+        <MsalProvider instance={msalInstance}>
+            <div className="App">
+                <h1>Company SSO Login</h1>
+                <LoginButton />
+                <UserProfile />
+            </div>
+        </MsalProvider>
+    );
+};
+
+export default App;
 
 
-curl "http://localhost:8080/autocomplete?q=john"
-Post User Details:
+
+REACT_APP_CLIENT_ID=YOUR_CLIENT_ID
+REACT_APP_TENANT_ID=YOUR_TENANT_ID
+REACT_APP_API_URL=https://localhost:5001/api
 
 
-curl -X POST "http://localhost:8080/post-user-details" -H "Content-Type: application/json" -d '{"name": "John Doe", "email": "john@example.com"}'
-ServiceNow Tickets:
 
 
-curl "http://localhost:8080/servicenow-tickets?username=johndoe"
+const clientId = process.env.REACT_APP_CLIENT_ID!;
+const tenantId = process.env.REACT_APP_TENANT_ID!;
+const apiUrl = process.env.REACT_APP_API_URL!;
 
-python -m venv venv
-pip install Flask
-pip freeze > requirements.txt\
-python app.py
+export const msalConfig = {
+    auth: {
+        clientId,
+        authority: `https://login.microsoftonline.com/${tenantId}`,
+        redirectUri: "http://localhost:3000",
+    },
+    cache: {
+        cacheLocation: "localStorage",
+        storeAuthStateInCookie: false,
+    }
+};
+
+export const loginRequest = {
+    scopes: ["openid", "profile", "email", "User.Read"]
+};
+
+export const API_URL = apiUrl;
+
+
 
