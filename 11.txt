@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { PublicClientApplication, Configuration, InteractionRequiredAuthError } from "@azure/msal-browser";
+import { PublicClientApplication, InteractionRequiredAuthError } from "@azure/msal-browser";
 import { msalConfig, loginRequest } from "./authConfig"; // Import MSAL config
 import axios from "axios";
 
 // Declare MSAL Client Application instance
 let pca: PublicClientApplication;
 
-const LoginPage = () => {
+const App = () => {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,7 +14,7 @@ const LoginPage = () => {
   useEffect(() => {
     pca = new PublicClientApplication(msalConfig);
 
-    // This can be used for silent login if already authenticated
+    // Check if there's already an authenticated account
     const checkAccount = pca.getAllAccounts();
     if (checkAccount.length > 0) {
       // Automatically sign in if there's an active session
@@ -74,18 +74,18 @@ const LoginPage = () => {
   return (
     <div>
       <h2>Login with Microsoft</h2>
-      <button onClick={handleLogin}>Login</button>
-
-      {error && <div>{error}</div>}
-
-      {userInfo && (
+      {!userInfo ? (
+        <button onClick={handleLogin}>Login</button>
+      ) : (
         <div>
           <h3>Welcome {userInfo.displayName}</h3>
           <p>Email: {userInfo.mail}</p>
         </div>
       )}
+
+      {error && <div>{error}</div>}
     </div>
   );
 };
 
-export default LoginPage;
+export default App;
