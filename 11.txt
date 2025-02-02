@@ -1,6 +1,72 @@
-https://login.microsoftonline.com/common/oauth2/v2.0/authorize
-  ?client_id=your-client-id
-  &response_type=code
-  &redirect_uri=http://localhost:5000/
-  &scope=openid profile user.read
-  &state=12345
+// authConfig.ts
+export const msalConfig = {
+  auth: {
+    clientId: "your-client-id",  // Replace with your Azure App client ID
+    authority: "https://login.microsoftonline.com/{tenant-id}",  // Your tenant ID or 'common' for multi-tenant
+    redirectUri: "http://localhost:3000", // The redirect URI you configured in Azure
+  },
+  cache: {
+    cacheLocation: "sessionStorage",  // or "localStorage" for persistent sessions
+    storeAuthStateInCookie: false,
+  },
+};
+
+export const loginRequest = {
+  scopes: ["openid", "profile", "user.read"], // Scopes required for login
+};
+
+
+
+import React, { useState } from "react";
+import { PublicClientApplication } from "@azure/msal-browser";
+import { msalConfig, loginRequest } from "./authConfig";
+import axios from "axios";
+
+// Initialize MSAL
+const pca = new PublicClientApplication(msalConfig);
+
+const LoginPage = () => {
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    try {
+      // Trigger login via Microsoft
+      const loginResponse = await pca.loginPopup(loginRequest);
+      const accessToken = loginResponse.accessToken; // Access token returned by Microsoft
+
+      // Fetch user details from Microsoft Graph
+      const userResponse = await axios.get("https://graph.microsoft.com/v1.0/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // Store the user data
+      setUserInfo(userResponse.data);
+    } catch (err) {
+      setError("Login failed! " + err.message);
+    }
+  };
+
+  return (
+    <div>
+      <h2>Login with Microsoft</h2>
+      <button onClick={handleLogin}>Login</button>
+
+      {error && <div>{error}</div>}
+
+      {userInfo && (
+        <div>
+          <h3>Welcome {userInfo.displayName}</h3>
+          <p>Email: {userInfo.mail}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LoginPage;
+
+
+
