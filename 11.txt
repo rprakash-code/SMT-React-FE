@@ -9,6 +9,7 @@ const App = () => {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isMsalInitialized, setIsMsalInitialized] = useState(false); // Track if MSAL is initialized
+  const [isLoggingIn, setIsLoggingIn] = useState(false); // Track if login is in progress
 
   // Initialize MSAL client app when component mounts
   useEffect(() => {
@@ -39,6 +40,8 @@ const App = () => {
       return;
     }
 
+    setIsLoggingIn(true); // Set login status to true
+
     try {
       // Use loginPopup() for interactive login
       const loginResponse = await pca.loginPopup(loginRequest);
@@ -54,7 +57,10 @@ const App = () => {
       });
 
       setUserInfo(userResponse.data); // Store the user info in state
+      setIsLoggingIn(false); // Set login status to false after login
     } catch (err) {
+      setIsLoggingIn(false); // Set login status to false if error occurs
+
       if (err instanceof InteractionRequiredAuthError) {
         setError("Authentication requires interaction.");
       } else {
@@ -91,7 +97,9 @@ const App = () => {
     <div>
       <h2>Login with Microsoft</h2>
       {!userInfo ? (
-        <button onClick={handleLogin}>Login</button>
+        <button onClick={handleLogin} disabled={isLoggingIn}>
+          {isLoggingIn ? "Logging in..." : "Login"}
+        </button>
       ) : (
         <div>
           <h3>Welcome {userInfo.displayName}</h3>
