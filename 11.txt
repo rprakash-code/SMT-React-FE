@@ -1,161 +1,23 @@
-from flask import Flask
-from routes.software_routes import software_blueprint
-from routes.autocomplete_routes import autocomplete_blueprint
-from routes.user_routes import user_blueprint
-from routes.servicenow_routes import servicenow_blueprint
-
-app = Flask(__name__)
-
-# Register Blueprints
-app.register_blueprint(software_blueprint, url_prefix="/software-details")
-app.register_blueprint(autocomplete_blueprint, url_prefix="/autocomplete")
-app.register_blueprint(user_blueprint, url_prefix="/post-user-details")
-app.register_blueprint(servicenow_blueprint, url_prefix="/servicenow-tickets")
-
-if __name__ == "__main__":
-    print("Server is running on port 8080")
-    app.run(host="0.0.0.0", port=8080)
+API Endpoints 
+Software Details:
 
 
-
-from flask import Blueprint, request, jsonify
-from services.software_service import get_software_details
-
-software_blueprint = Blueprint("software", __name__)
-
-@software_blueprint.route("/", methods=["GET"])
-def handle_software_details():
-    username = request.args.get("username")
-    email = request.args.get("email")
-
-    if not username or not email:
-        return jsonify({"error": "Username and email are required"}), 400
-
-    response = get_software_details(username, email)
-    return jsonify(response)
+curl "http://localhost:8080/software-details?username=john&email=john@example.com"
+Autocomplete:
 
 
-
-def get_software_details(username, email):
-    return {
-        "success": True,
-        "username": username,
-        "email": email,
-        "software": [
-            {
-                "name": "GoLang",
-                "description": "A statically typed, compiled programming language designed for simplicity and performance.",
-                "version": "1.20.3",
-                "link": "https://golang.org",
-            },
-            {
-                "name": "Visual Studio Code",
-                "description": "A lightweight code editor with support for various languages.",
-                "version": "1.76.2",
-                "link": "https://code.visualstudio.com/",
-            },
-        ],
-    }
+curl "http://localhost:8080/autocomplete?q=john"
+Post User Details:
 
 
+curl -X POST "http://localhost:8080/post-user-details" -H "Content-Type: application/json" -d '{"name": "John Doe", "email": "john@example.com"}'
+ServiceNow Tickets:
 
 
+curl "http://localhost:8080/servicenow-tickets?username=johndoe"
 
-from flask import Blueprint, request, jsonify
-from services.autocomplete_service import search_users
-
-autocomplete_blueprint = Blueprint("autocomplete", __name__)
-
-@autocomplete_blueprint.route("/", methods=["GET"])
-def handle_autocomplete():
-    query = request.args.get("q", "").lower()
-    results = search_users(query)
-    return jsonify({"success": True, "results": results})
-
-
-
-
-
-def search_users(query):
-    usernames = [
-        {"username": "johndoe", "email": "johndoe@example.com"},
-        {"username": "janedoe", "email": "janedoe@example.com"},
-        {"username": "johnsmith", "email": "johnsmith@example.com"},
-        {"username": "janesmith", "email": "janesmith@example.com"},
-    ]
-    return [user for user in usernames if query in user["username"].lower() or query in user["email"].lower()]
-
-
-
-
-
-
-
-
-
-from flask import Blueprint, request, jsonify
-from services.user_service import process_user_details
-
-user_blueprint = Blueprint("user", __name__)
-
-@user_blueprint.route("/", methods=["POST"])
-def handle_post_user_details():
-    if request.method != "POST":
-        return jsonify({"error": "Invalid request method"}), 405
-
-    try:
-        request_body = request.get_json()
-    except Exception:
-        return jsonify({"error": "Invalid JSON payload"}), 400
-
-    response = process_user_details(request_body)
-    return jsonify(response)
-
-
-def process_user_details(user_data):
-    return {
-        "success": True,
-        "message": "User details received",
-        "details": user_data,
-    }
-
-
-
-
-
-
-
-
-
-from flask import Blueprint, request, jsonify
-from services.servicenow_service import get_tickets_for_user
-
-servicenow_blueprint = Blueprint("servicenow", __name__)
-
-@servicenow_blueprint.route("/", methods=["GET"])
-def handle_servicenow_tickets():
-    username = request.args.get("username")
-
-    if not username:
-        return jsonify({"error": "Username is required"}), 400
-
-    response = get_tickets_for_user(username)
-    return jsonify(response)
-
-
-
-
-def get_tickets_for_user(username):
-    return {
-        "success": True,
-        "username": username,
-        "tickets": [
-            {"ticket_id": "INC0012345", "status": "Resolved", "description": "System issue resolved."},
-            {"ticket_id": "INC0012346", "status": "Open", "description": "Pending network configuration."},
-        ],
-    }
-
-
-
-
+python -m venv venv
+pip install Flask
+pip freeze > requirements.txt\
+python app.py
 
