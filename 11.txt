@@ -1,165 +1,22 @@
-{
-  "AzureAd": {
-    "Instance": "https://login.microsoftonline.com/",
-    "TenantId": "YOUR_TENANT_ID",
-    "ClientId": "YOUR_CLIENT_ID",
-    "ClientSecret": "YOUR_CLIENT_SECRET",
-    "RedirectUri": "http://localhost:5000/auth/callback",
-    "Authority": "https://login.microsoftonline.com/YOUR_TENANT_ID",
-    "Scope": "User.Read"
-  }
-}
+     var packages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Package>>(data);
+     var newPackages = new List<object>();
+
+     foreach (var package in packages)
+     {
+         if (package.u_notes != null)
+         {
+             //var newArray = new List<object>();
+             var newField = package.u_notes?.Split(';').FirstOrDefault(f => f.Trim().Contains("GRAPAC"));
+             //newArray.Add(new { ADGroupName = newField });
+             string jsonAssignedToArray = package.assigned_to?.ToString() ?? "[]";
+             dynamic objAssignedTo = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(jsonAssignedToArray);
+             string AssertOwner = objAssignedTo.display_value;
+
+             string jsonOwnedbyArray = package.owned_by?.ToString() ?? "[]";
+             dynamic objOwnedby = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(jsonOwnedbyArray);
+             string DelegatedAssertOwner = objOwnedby.display_value;
+
+             string Description = package.short_description;
 
 
-
-using Microsoft.Identity.Client;
-using System;
-using System.Threading.Tasks;
-
-public class AuthService
-{
-    private readonly IConfiguration _config;
-
-    public AuthService(IConfiguration config)
-    {
-        _config = config;
-    }
-
-    public async Task<string> ExchangeCodeForToken(string code)
-    {
-        var app = PublicClientApplicationBuilder.Create(_config["AzureAd:ClientId"])
-            .WithAuthority(_config["AzureAd:Authority"])
-            .WithRedirectUri(_config["AzureAd:RedirectUri"])
-            .Build();
-
-        var result = await app.AcquireTokenByAuthorizationCode(new[] { _config["AzureAd:Scope"] }, code).ExecuteAsync();
-        return result.AccessToken;
-    }
-}
-
-
-
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Graph;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
-
-[Route("api/auth")]
-[ApiController]
-public class AuthController : ControllerBase
-{
-    private readonly AuthService _authService;
-
-    public AuthController(AuthService authService)
-    {
-        _authService = authService;
-    }
-
-    [HttpGet("callback")]
-    public async Task<IActionResult> AuthCallback([FromQuery] string code)
-    {
-        var accessToken = await _authService.ExchangeCodeForToken(code);
-        return Ok(new { token = accessToken });
-    }
-
-    [HttpGet("me")]
-    public async Task<IActionResult> GetUserDetails([FromQuery] string token)
-    {
-        var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(
-            requestMessage =>
-            {
-                requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                return Task.CompletedTask;
-            }));
-
-        var user = await graphClient.Me.Request().GetAsync();
-        return Ok(new { Name = user.DisplayName, Email = user.Mail, Id = user.Id });
-    }
-}
-
-
-
-
-
-import { PublicClientApplication } from "@azure/msal-browser";
-
-export const msalInstance = new PublicClientApplication({
-  auth: {
-    clientId: "YOUR_CLIENT_ID",
-    authority: "https://login.microsoftonline.com/YOUR_TENANT_ID",
-    redirectUri: "http://localhost:3000",
-  }
-});
-
-
-
-import axios from "axios";
-
-export const fetchUserDetails = async (token: string) => {
-  try {
-    const response = await axios.get("http://localhost:5000/api/auth/me", {
-      params: { token },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching user details:", error);
-    return null;
-  }
-};
-
-
-import React, { useState } from "react";
-import { msalInstance } from "./msalConfig";
-import { fetchUserDetails } from "./authService";
-
-const Login: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
-
-  const handleLogin = async () => {
-    try {
-      const loginResponse = await msalInstance.loginPopup({
-        scopes: ["User.Read"],
-      });
-
-      const userData = await fetchUserDetails(loginResponse.accessToken);
-      setUser(userData);
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
-  };
-
-  return (
-    <div>
-      <h2>Azure SSO Login</h2>
-      <button onClick={handleLogin}>Login with Microsoft</button>
-
-      {user && (
-        <div>
-          <h3>Welcome, {user.Name}</h3>
-          <p>Email: {user.Email}</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Login;
-
-
-
-import React from "react";
-import Login from "./Login";
-
-const App: React.FC = () => {
-  return (
-    <div>
-      <h1>Company SSO Login</h1>
-      <Login />
-    </div>
-  );
-};
-
-export default App;
-
-
-
+             newPackages.Add(new { package.name, Description, package.sys_id, AssertOwner, DelegatedAssertOwner, package.version, ADGroupName = newField , link = "https://google.com"});
