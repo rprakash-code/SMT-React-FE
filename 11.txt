@@ -232,3 +232,44 @@ public class UserRepository
         return users;
     }
 }
+
+
+ // Insert multiple users into the database
+        public async Task InsertUsersAsync(List<ActiveDirectoryUser> users)
+        {
+            using var connection = _azureSqlTokenService.GetSqlConnection();
+            try
+            {
+                await connection.OpenAsync();
+
+                foreach (var user in users)
+                {
+                    var query = $@"INSERT INTO {TableNames.Jidoka_ActiveDirectory_Users} (Name, Mail, Description, Department, SamAccountName, UserPrincipalName, ExtensionAttribute7) 
+                              VALUES (@Name, @Mail, @Description, @Department, @SamAccountName, @UserPrincipalName, @ExtensionAttribute7)";
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Name", user.Name);
+                        command.Parameters.AddWithValue("@Mail", (object)user.Mail ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@Description", (object)user.Description ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@Department", (object)user.Department ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@SamAccountName", user.SamAccountName);
+                        command.Parameters.AddWithValue("@UserPrincipalName", user.UserPrincipalName);
+                        command.Parameters.AddWithValue("@ExtensionAttribute7", user.ExtensionAttribute7);
+
+
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error Creating SQL Connection", ex);
+            }
+            finally
+            {
+                if (connection.State == System.Data.ConnectionState.Open)
+                {
+                    await connection.CloseAsync();
+                }
+            }
+        }
