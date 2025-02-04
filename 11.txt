@@ -1,22 +1,12 @@
-     var packages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Package>>(data);
-     var newPackages = new List<object>();
-
-     foreach (var package in packages)
-     {
-         if (package.u_notes != null)
-         {
-             //var newArray = new List<object>();
-             var newField = package.u_notes?.Split(';').FirstOrDefault(f => f.Trim().Contains("GRAPAC"));
-             //newArray.Add(new { ADGroupName = newField });
-             string jsonAssignedToArray = package.assigned_to?.ToString() ?? "[]";
-             dynamic objAssignedTo = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(jsonAssignedToArray);
-             string AssertOwner = objAssignedTo.display_value;
-
-             string jsonOwnedbyArray = package.owned_by?.ToString() ?? "[]";
-             dynamic objOwnedby = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(jsonOwnedbyArray);
-             string DelegatedAssertOwner = objOwnedby.display_value;
-
-             string Description = package.short_description;
+A component suspended while responding to synchronous input. This will cause the UI to be replaced with a loading indicator. To fix, updates that suspend should be wrapped with startTransition.
+Error: A component suspended while responding to synchronous input. This will cause the UI to be replaced with a loading indicator. To fix, updates that suspend should be wrapped with startTransition.
+    at throwException (http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:14261:43)
+    at handleError (http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:19087:15)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:19172:15)
+    at recoverFromConcurrentError (http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:18786:28)
+    at performSyncWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:18932:28)
+    at flushSyncCallbacks (http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:9166:30)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-5ARBDF5W.js?v=1ba9e859:18677:21
 
 
-             newPackages.Add(new { package.name, Description, package.sys_id, AssertOwner, DelegatedAssertOwner, package.version, ADGroupName = newField , link = "https://google.com"});
+
