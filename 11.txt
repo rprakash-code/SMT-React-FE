@@ -2,21 +2,227 @@ namespace YourProject.Constants
 {
     public static class ApiUrls
     {
-        public const string UserServiceBaseUrl = "https://api.example.com/users";
-        public const string OrderServiceBaseUrl = "https://api.example.com/orders";
-        public const string ProductServiceBaseUrl = "https://api.example.com/products";
+        public const string BaseUrl = "https://api.example.com";  // API Base URL
+        
+        // User Endpoints
+        public const string GetUserById = "/users/{0}";  
+        public const string CreateUser = "/users";
+        public const string UpdateUser = "/users/{0}";
+        public const string DeleteUser = "/users/{0}";
+    }
+}
 
-        // Specific Endpoints
-        public static class Users
+
+
+
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+
+namespace YourProject.CommonServices
+{
+    public class ApiService
+    {
+        private readonly HttpClient _httpClient;
+        private readonly ILogger<ApiService> _logger;
+
+        public ApiService(HttpClient httpClient, ILogger<ApiService> logger)
         {
-            public const string GetUserById = UserServiceBaseUrl + "/{0}"; // {0} for string.Format()
-            public const string GetAllUsers = UserServiceBaseUrl + "/all";
+            _httpClient = httpClient;
+            _logger = logger;
         }
 
-        public static class Orders
+        /// 🔹 **GET Request**
+        public async Task<T> GetAsync<T>(string url)
         {
-            public const string GetOrderById = OrderServiceBaseUrl + "/{0}";
-            public const string GetAllOrders = OrderServiceBaseUrl + "/all";
+            try
+            {
+                HttpResponseMessage response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<T>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"GET request failed: {url}, Exception: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// 🔹 **POST Request**
+        public async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest data)
+        {
+            try
+            {
+                var content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await _httpClient.PostAsync(url, content);
+                response.EnsureSuccessStatusCode();
+
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<TResponse>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"POST request failed: {url}, Exception: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// 🔹 **PUT Request (Update)**
+        public async Task<TResponse> PutAsync<TRequest, TResponse>(string url, TRequest data)
+        {
+            try
+            {
+                var content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await _httpClient.PutAsync(url, content);
+                response.EnsureSuccessStatusCode();
+
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<TResponse>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"PUT request failed: {url}, Exception: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// 🔹 **DELETE Request**
+        public async Task<bool> DeleteAsync(string url)
+        {
+            try
+            {
+                HttpResponseMessage response = await _httpClient.DeleteAsync(url);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"DELETE request failed: {url}, Exception: {ex.Message}");
+                throw;
+            }
         }
     }
 }
+
+
+
+
+
+using System.Threading.Tasks;
+using YourProject.CommonServices;
+using YourProject.Constants;
+using YourProject.Models;
+
+namespace YourProject.Services
+{
+    public class UserService
+    {
+        private readonly ApiService _apiService;
+
+        public UserService(ApiService apiService)
+        {
+            _apiService = apiService;
+        }
+
+        // 🔹 Get User by ID
+        public async Task<User> GetUserByIdAsync(int userId)
+        {
+            string url = $"{ApiUrls.BaseUrl}{string.Format(ApiUrls.GetUserById, userId)}";
+            return await _apiService.GetAsync<User>(url);
+        }
+
+        // 🔹 Create User
+        public async Task<User> CreateUserAsync(User user)
+        {
+            string url = $"{ApiUrls.BaseUrl}{ApiUrls.CreateUser}";
+            return await _apiService.PostAsync<User, User>(url, user);
+        }
+
+        // 🔹 Update User
+        public async Task<User> UpdateUserAsync(int userId, User user)
+        {
+            string url = $"{ApiUrls.BaseUrl}{string.Format(ApiUrls.UpdateUser, userId)}";
+            return await _apiService.PutAsync<User, User>(url, user);
+        }
+
+        // 🔹 Delete User
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            string url = $"{ApiUrls.BaseUrl}{string.Format(ApiUrls.DeleteUser, userId)}";
+            return await _apiService.DeleteAsync(url);
+        }
+    }
+}
+
+
+
+
+
+
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using YourProject.Services;
+using YourProject.Models;
+
+[ApiController]
+[Route("api/users")]
+public class UserController : ControllerBase
+{
+    private readonly UserService _userService;
+
+    public UserController(UserService userService)
+    {
+        _userService = userService;
+    }
+
+    // 🔹 Get User by ID
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUser(int id)
+    {
+        var user = await _userService.GetUserByIdAsync(id);
+        return user != null ? Ok(user) : NotFound();
+    }
+
+    // 🔹 Create User
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] User user)
+    {
+        var createdUser = await _userService.CreateUserAsync(user);
+        return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
+    }
+
+    // 🔹 Update User
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] User user)
+    {
+        var updatedUser = await _userService.UpdateUserAsync(id, user);
+        return Ok(updatedUser);
+    }
+
+    // 🔹 Delete User
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        bool success = await _userService.DeleteUserAsync(id);
+        return success ? NoContent() : NotFound();
+    }
+}
+
+
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register HttpClient
+builder.Services.AddHttpClient<ApiService>();
+
+// Register Business Services
+builder.Services.AddScoped<UserService>();
+
+var app = builder.Build();
+app.MapControllers();
+app.Run();
