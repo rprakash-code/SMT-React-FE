@@ -1,4 +1,30 @@
-    private string GetAccessToken()
+using System.Data.SqlClient;
+
+public interface IAzureSqlTokenService
+{
+    string GetAccessToken();
+    SqlConnection GetSqlConnection();
+}
+
+
+
+
+
+using System;
+using System.Data.SqlClient;
+using Microsoft.Identity.Client;
+using Microsoft.Extensions.Options;
+
+public class AzureSqlTokenService : IAzureSqlTokenService
+{
+    private readonly DbConnectionSettings _dbConnectionSettings;
+
+    public AzureSqlTokenService(IOptions<DbConnectionSettings> dbConnectionSettings)
+    {
+        _dbConnectionSettings = dbConnectionSettings.Value;
+    }
+
+    public string GetAccessToken()
     {
         var app = ConfidentialClientApplicationBuilder.Create(_dbConnectionSettings.AzureSQLClientId)
                  .WithClientSecret(_dbConnectionSettings.AzureSQLClientSecret)
@@ -7,9 +33,9 @@
 
         var result = app.AcquireTokenForClient(new[] { "https://database.windows.net/.default" }).ExecuteAsync().GetAwaiter().GetResult();
         return result.AccessToken;
-
     }
-    private SqlConnection GetSqlConnection()
+
+    public SqlConnection GetSqlConnection()
     {
         var accessToken = GetAccessToken();
         var connection = new SqlConnection(_dbConnectionSettings.SqlDatabaseUrl)
@@ -19,22 +45,41 @@
         connection.Open();
         return connection;
     }
+}
+
+
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Bind settings from appsettings.json
+builder.Services.Configure<DbConnectionSettings>(builder.Configuration.GetSection("DbConnectionSettings"));
+
+// Register the Azure SQL Token Service
+builder.Services.AddSingleton<IAzureSqlTokenService, AzureSqlTokenService>();
 
 var app = builder.Build();
 
-// Configure HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
+
+
+public class MyService
+{
+    private readonly IAzureSqlTokenService _azureSqlTokenService;
+
+    public MyService(IAzureSqlTokenService azureSqlTokenService)
+    {
+        _azureSqlTokenService = azureSqlTokenService;
+    }
+
+    public void SomeDatabaseOperation()
+    {
+        using var connection = _azureSqlTokenService.GetSqlConnection();
+        using var command = new SqlCommand("SELECT TOP 1 * FROM Users", connection);
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            Console.WriteLine(reader["Name"]);
+        }
+    }
+}
