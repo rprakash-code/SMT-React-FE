@@ -230,43 +230,137 @@ app.Run();
 
 
 
-            var request = new HttpRequestMessage(HttpMethod.Post, ServiceNowCMDBUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
-                Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("NN_SC_API_JP_nn_jp_automation_SNOW:K53D9055Z6A92qB3e2#ONXTQHT3Aa65H67GR"))); // Replace with actual credentials
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+     using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
-            string groupName = "jp";
-          
+public class ApiService
+{
+    private readonly HttpClient _httpClient;
 
-            string query = $"{ServicenowApiUrls.CMDB.GetSoftwarePacakges}{string.Format(groupName, assignedTo, packageName)}";
- 
+    public ApiService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
 
-            var body = new
-            {
-                sender_identifier = "nn_jp_automation_SNOWITSMProd",
-                module = "cmdb_ci",
-                table = "cmdb_ci_spkg",
-                fields = new[] { "u_package_type", "assigned_to", "owned_by", "version", "operational_status", "owned_by", "u_managed_by_group", "package_name", "short_description", "u_notes", "u_work_notes", "name", "sys_id", "sys_updated_on", "short_description", "u_notes" },
-                query = query,
-                data_type = "array",
-                limit = 1000,
-                startAt = 1,
-                endAt = 300,
-                order = "DESC",
-                sort = "number",
-                count_only = false
-            };
+    // Reusable method for POST requests
+    public async Task<T> PostAsync<T>(string url, object body, string username, string password)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
 
-            request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
+        // Basic Authentication
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-           
-            response.EnsureSuccessStatusCode();
+        // Add body content
+        request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-            var responseBody = await response.Content.ReadAsStringAsync();
-            var jsonResponse = JObject.Parse(responseBody);
-            var data = jsonResponse["result"]["data"].ToString();
-            
+        // Send the request
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
 
-            var packages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Package>>(data);
+        // Read and parse the response
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var jsonResponse = JObject.Parse(responseBody);
+
+        // Extract the 'data' field
+        var data = jsonResponse["result"]?["data"]?.ToString();
+
+        if (string.IsNullOrEmpty(data))
+        {
+            throw new Exception("No data found in the response.");
+        }
+
+        return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(data);
+    }
+}
+
+
+
+
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register HttpClient and ApiService
+builder.Services.AddHttpClient<ApiService>();
+
+builder.Services.AddControllers();
+var app = builder.Build();
+app.MapControllers();
+app.Run();
+
+
+
+
+
+
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+[ApiController]
+[Route("api/[controller]")]
+public class PackageController : ControllerBase
+{
+    private readonly ApiService _apiService;
+
+    public PackageController(ApiService apiService)
+    {
+        _apiService = apiService;
+    }
+
+    [HttpPost("fetch-packages")]
+    public async Task<IActionResult> FetchPackages([FromBody] PackageRequest request)
+    {
+        string serviceNowUrl = "https://your-servicenow-instance/api/cmdb_ci_spkg"; // Replace with actual URL
+        string username = "NN_SC_API_JP_nn_jp_automation_SNOW";
+        string password = "K53D9055Z6A92qB3e2#ONXTQHT3Aa65H67GR";
+
+        var body = new
+        {
+            sender_identifier = "nn_jp_automation_SNOWITSMProd",
+            module = "cmdb_ci",
+            table = "cmdb_ci_spkg",
+            fields = new[] { "u_package_type", "assigned_to", "owned_by", "version", "operational_status", "owned_by", "u_managed_by_group", "package_name", "short_description", "u_notes", "u_work_notes", "name", "sys_id", "sys_updated_on", "short_description", "u_notes" },
+            query = request.Query,
+            data_type = "array",
+            limit = 1000,
+            startAt = 1,
+            endAt = 300,
+            order = "DESC",
+            sort = "number",
+            count_only = false
+        };
+
+        try
+        {
+            var packages = await _apiService.PostAsync<List<Package>>(serviceNowUrl, body, username, password);
+            return Ok(packages);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+}
+
+public class PackageRequest
+{
+    public string Query { get; set; }
+}
+
+public class Package
+{
+    public string Name { get; set; }
+    public string Version { get; set; }
+    public string AssignedTo { get; set; }
+    public string Description { get; set; }
+    public string SysId { get; set; }
+    // Add other properties as needed
+}
