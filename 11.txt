@@ -163,3 +163,33 @@ public class UserController : ControllerBase
         return Ok(users);
     }
 }
+
+
+
+
+
+ public async Task<List<ActiveDirectoryUserDto>> GetUsersAsync(string searchQuery)
+ {
+     var users = new List<ActiveDirectoryUserDto>();
+     try
+     {
+         var query = $@"
+            SELECT Description as DisplayName, Name as InsimID, Mail, UserPrincipalName as OnPremEmail  FROM {TableNames.Jidoka_ActiveDirectory_Users} WHERE lower(Description) LIKE @SearchQuery";
+         var parameters = new Dictionary<string, object>();
+         parameters.Add("@SearchQuery", $"%{searchQuery.ToLower()}%");
+
+         using (var reader = await command.ExecuteReaderAsync())
+         {
+             while (await reader.ReadAsync())
+             {
+                 users.Add(new ActiveDirectoryUserDto
+                 {
+                     Description = reader["DisplayName"].ToString(),
+                     Mail = reader["Mail"].ToString(),
+                     SamAccountName = reader["InsimID"].ToString(),
+                     UserPrincipalName = reader["OnPremEmail"].ToString()
+
+                 });
+             }
+         }
+     }
