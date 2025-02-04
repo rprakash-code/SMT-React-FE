@@ -1,108 +1,86 @@
-namespace YourProject.Constants
-{
-    public static class ApiUrls
-    {
-        public const string BaseUrl = "https://api.example.com";  // API Base URL
-        
-        // User Endpoints
-        public const string GetUserById = "/users/{0}";  
-        public const string CreateUser = "/users";
-        public const string UpdateUser = "/users/{0}";
-        public const string DeleteUser = "/users/{0}";
-    }
-}
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
 
+public interface IAdoNetService
+{
+    Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters = null);
+    Task<object> ExecuteScalarAsync(string query, Dictionary<string, object> parameters = null);
+    Task<DataTable> ExecuteQueryAsync(string query, Dictionary<string, object> parameters = null);
+}
 
 
 
 using System;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace YourProject.CommonServices
+public class AdoNetService : IAdoNetService
 {
-    public class ApiService
+    private readonly string _connectionString;
+    private readonly ILogger<AdoNetService> _logger;
+
+    public AdoNetService(IConfiguration configuration, ILogger<AdoNetService> logger)
     {
-        private readonly HttpClient _httpClient;
-        private readonly ILogger<ApiService> _logger;
+        _connectionString = configuration.GetConnectionString("DefaultConnection"); // Ensure this exists in appsettings.json
+        _logger = logger;
+    }
 
-        public ApiService(HttpClient httpClient, ILogger<ApiService> logger)
+    public async Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters = null)
+    {
+        using (var connection = new SqlConnection(_connectionString))
         {
-            _httpClient = httpClient;
-            _logger = logger;
-        }
-
-        /// 🔹 **GET Request**
-        public async Task<T> GetAsync<T>(string url)
-        {
-            try
+            await connection.OpenAsync();
+            using (var command = new SqlCommand(query, connection))
             {
-                HttpResponseMessage response = await _httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                
-                string jsonResponse = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<T>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"GET request failed: {url}, Exception: {ex.Message}");
-                throw;
+                AddParameters(command, parameters);
+                return await command.ExecuteNonQueryAsync();
             }
         }
+    }
 
-        /// 🔹 **POST Request**
-        public async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest data)
+    public async Task<object> ExecuteScalarAsync(string query, Dictionary<string, object> parameters = null)
+    {
+        using (var connection = new SqlConnection(_connectionString))
         {
-            try
+            await connection.OpenAsync();
+            using (var command = new SqlCommand(query, connection))
             {
-                var content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json");
-                HttpResponseMessage response = await _httpClient.PostAsync(url, content);
-                response.EnsureSuccessStatusCode();
-
-                string jsonResponse = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<TResponse>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"POST request failed: {url}, Exception: {ex.Message}");
-                throw;
+                AddParameters(command, parameters);
+                return await command.ExecuteScalarAsync();
             }
         }
+    }
 
-        /// 🔹 **PUT Request (Update)**
-        public async Task<TResponse> PutAsync<TRequest, TResponse>(string url, TRequest data)
+    public async Task<DataTable> ExecuteQueryAsync(string query, Dictionary<string, object> parameters = null)
+    {
+        using (var connection = new SqlConnection(_connectionString))
         {
-            try
+            await connection.OpenAsync();
+            using (var command = new SqlCommand(query, connection))
             {
-                var content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json");
-                HttpResponseMessage response = await _httpClient.PutAsync(url, content);
-                response.EnsureSuccessStatusCode();
-
-                string jsonResponse = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<TResponse>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"PUT request failed: {url}, Exception: {ex.Message}");
-                throw;
+                AddParameters(command, parameters);
+                using (var adapter = new SqlDataAdapter(command))
+                {
+                    DataTable dataTable = new DataTable();
+                    adapter.Fill(dataTable);
+                    return dataTable;
+                }
             }
         }
+    }
 
-        /// 🔹 **DELETE Request**
-        public async Task<bool> DeleteAsync(string url)
+    private void AddParameters(SqlCommand command, Dictionary<string, object> parameters)
+    {
+        if (parameters != null)
         {
-            try
+            foreach (var param in parameters)
             {
-                HttpResponseMessage response = await _httpClient.DeleteAsync(url);
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"DELETE request failed: {url}, Exception: {ex.Message}");
-                throw;
+                command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
             }
         }
     }
@@ -112,51 +90,44 @@ namespace YourProject.CommonServices
 
 
 
+
+
+// ✅ Register AdoNetService as a Scoped Service
+builder.Services.AddScoped<IAdoNetService, AdoNetService>();
+
+
+
+using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
-using YourProject.CommonServices;
-using YourProject.Constants;
-using YourProject.Models;
 
-namespace YourProject.Services
+public class UserRepository
 {
-    public class UserService
+    private readonly IAdoNetService _adoNetService;
+
+    public UserRepository(IAdoNetService adoNetService)
     {
-        private readonly ApiService _apiService;
+        _adoNetService = adoNetService;
+    }
 
-        public UserService(ApiService apiService)
+    public async Task<int> AddUserAsync(string name, string email)
+    {
+        string query = "INSERT INTO Users (Name, Email) VALUES (@Name, @Email)";
+        var parameters = new Dictionary<string, object>
         {
-            _apiService = apiService;
-        }
+            { "@Name", name },
+            { "@Email", email }
+        };
+        return await _adoNetService.ExecuteNonQueryAsync(query, parameters);
+    }
 
-        // 🔹 Get User by ID
-        public async Task<User> GetUserByIdAsync(int userId)
-        {
-            string url = $"{ApiUrls.BaseUrl}{string.Format(ApiUrls.GetUserById, userId)}";
-            return await _apiService.GetAsync<User>(url);
-        }
-
-        // 🔹 Create User
-        public async Task<User> CreateUserAsync(User user)
-        {
-            string url = $"{ApiUrls.BaseUrl}{ApiUrls.CreateUser}";
-            return await _apiService.PostAsync<User, User>(url, user);
-        }
-
-        // 🔹 Update User
-        public async Task<User> UpdateUserAsync(int userId, User user)
-        {
-            string url = $"{ApiUrls.BaseUrl}{string.Format(ApiUrls.UpdateUser, userId)}";
-            return await _apiService.PutAsync<User, User>(url, user);
-        }
-
-        // 🔹 Delete User
-        public async Task<bool> DeleteUserAsync(int userId)
-        {
-            string url = $"{ApiUrls.BaseUrl}{string.Format(ApiUrls.DeleteUser, userId)}";
-            return await _apiService.DeleteAsync(url);
-        }
+    public async Task<DataTable> GetAllUsersAsync()
+    {
+        string query = "SELECT * FROM Users";
+        return await _adoNetService.ExecuteQueryAsync(query);
     }
 }
+
 
 
 
@@ -164,241 +135,31 @@ namespace YourProject.Services
 
 
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 using System.Threading.Tasks;
-using YourProject.Services;
-using YourProject.Models;
 
-[ApiController]
 [Route("api/users")]
+[ApiController]
 public class UserController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly UserRepository _userRepository;
 
-    public UserController(UserService userService)
+    public UserController(UserRepository userRepository)
     {
-        _userService = userService;
+        _userRepository = userRepository;
     }
 
-    // 🔹 Get User by ID
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUser(int id)
+    [HttpPost("add")]
+    public async Task<IActionResult> AddUser(string name, string email)
     {
-        var user = await _userService.GetUserByIdAsync(id);
-        return user != null ? Ok(user) : NotFound();
+        int rowsAffected = await _userRepository.AddUserAsync(name, email);
+        return Ok(new { message = "User added successfully", rowsAffected });
     }
 
-    // 🔹 Create User
-    [HttpPost]
-    public async Task<IActionResult> CreateUser([FromBody] User user)
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllUsers()
     {
-        var createdUser = await _userService.CreateUserAsync(user);
-        return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
-    }
-
-    // 🔹 Update User
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser(int id, [FromBody] User user)
-    {
-        var updatedUser = await _userService.UpdateUserAsync(id, user);
-        return Ok(updatedUser);
-    }
-
-    // 🔹 Delete User
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(int id)
-    {
-        bool success = await _userService.DeleteUserAsync(id);
-        return success ? NoContent() : NotFound();
+        DataTable users = await _userRepository.GetAllUsersAsync();
+        return Ok(users);
     }
 }
-
-
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register HttpClient
-builder.Services.AddHttpClient<ApiService>();
-
-// Register Business Services
-builder.Services.AddScoped<UserService>();
-
-var app = builder.Build();
-app.MapControllers();
-app.Run();
-
-
-
-
-     using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-
-public class ApiService
-{
-    private readonly HttpClient _httpClient;
-
-    public ApiService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
-    // Reusable method for POST requests
-    public async Task<T> PostAsync<T>(string url, object body, string username, string password)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-
-        // Basic Authentication
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-        // Add body content
-        request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-
-        // Send the request
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        // Read and parse the response
-        var responseBody = await response.Content.ReadAsStringAsync();
-        var jsonResponse = JObject.Parse(responseBody);
-
-        // Extract the 'data' field
-        var data = jsonResponse["result"]?["data"]?.ToString();
-
-        if (string.IsNullOrEmpty(data))
-        {
-            throw new Exception("No data found in the response.");
-        }
-
-        return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(data);
-    }
-}
-
-
-
-
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register HttpClient and ApiService
-builder.Services.AddHttpClient<ApiService>();
-
-builder.Services.AddControllers();
-var app = builder.Build();
-app.MapControllers();
-app.Run();
-
-
-
-
-
-
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-[ApiController]
-[Route("api/[controller]")]
-public class PackageController : ControllerBase
-{
-    private readonly ApiService _apiService;
-
-    public PackageController(ApiService apiService)
-    {
-        _apiService = apiService;
-    }
-
-    [HttpPost("fetch-packages")]
-    public async Task<IActionResult> FetchPackages([FromBody] PackageRequest request)
-    {
-        string serviceNowUrl = "https://your-servicenow-instance/api/cmdb_ci_spkg"; // Replace with actual URL
-        string username = "NN_SC_API_JP_nn_jp_automation_SNOW";
-        string password = "K53D9055Z6A92qB3e2#ONXTQHT3Aa65H67GR";
-
-        var body = new
-        {
-            sender_identifier = "nn_jp_automation_SNOWITSMProd",
-            module = "cmdb_ci",
-            table = "cmdb_ci_spkg",
-            fields = new[] { "u_package_type", "assigned_to", "owned_by", "version", "operational_status", "owned_by", "u_managed_by_group", "package_name", "short_description", "u_notes", "u_work_notes", "name", "sys_id", "sys_updated_on", "short_description", "u_notes" },
-            query = request.Query,
-            data_type = "array",
-            limit = 1000,
-            startAt = 1,
-            endAt = 300,
-            order = "DESC",
-            sort = "number",
-            count_only = false
-        };
-
-        try
-        {
-            var packages = await _apiService.PostAsync<List<Package>>(serviceNowUrl, body, username, password);
-            return Ok(packages);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-}
-
-public class PackageRequest
-{
-    public string Query { get; set; }
-}
-
-public class Package
-{
-    public string Name { get; set; }
-    public string Version { get; set; }
-    public string AssignedTo { get; set; }
-    public string Description { get; set; }
-    public string SysId { get; set; }
-    // Add other properties as needed
-}
-
-
- var request = new HttpRequestMessage(HttpMethod.Post, ServiceNowCMDBUrl);
- request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
-     Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("NN_SC_API_JP_nn_jp_automation_SNOW:K53D9055Z6A92qB3e2#ONXTQHT3Aa65H67GR"))); // Replace with actual credentials
- request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
- var requestData = new
- {
-     item_id = "07f44181dbf063806adb54904b96197d",
-     sysparm_quantity = "1",
-     variables = new
-     {
-         jap_this_application_is_only_valid = ""
-             },
-     get_portal_messages = "true",
-     sysparm_no_validation = "true"
- };
-
- // Serialize the request data
- string requestBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
-
- // Add JSON content
- request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
-
- // Send the request and handle the response
- var response = await _httpClient.SendAsync(request);
- response.EnsureSuccessStatusCode();
-
-
- var responseBody = await response.Content.ReadAsStringAsync();
- var jsonResponse = JObject.Parse(responseBody);
- var data = jsonResponse["result"]["data"].ToString();
- var packages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Package>>(data);
- //return packages;
-
-
- return await response.Content.ReadAsStringAsync();
