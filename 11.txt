@@ -364,3 +364,41 @@ public class Package
     public string SysId { get; set; }
     // Add other properties as needed
 }
+
+
+ var request = new HttpRequestMessage(HttpMethod.Post, ServiceNowCMDBUrl);
+ request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+     Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("NN_SC_API_JP_nn_jp_automation_SNOW:K53D9055Z6A92qB3e2#ONXTQHT3Aa65H67GR"))); // Replace with actual credentials
+ request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+ var requestData = new
+ {
+     item_id = "07f44181dbf063806adb54904b96197d",
+     sysparm_quantity = "1",
+     variables = new
+     {
+         jap_this_application_is_only_valid = ""
+             },
+     get_portal_messages = "true",
+     sysparm_no_validation = "true"
+ };
+
+ // Serialize the request data
+ string requestBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
+
+ // Add JSON content
+ request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+
+ // Send the request and handle the response
+ var response = await _httpClient.SendAsync(request);
+ response.EnsureSuccessStatusCode();
+
+
+ var responseBody = await response.Content.ReadAsStringAsync();
+ var jsonResponse = JObject.Parse(responseBody);
+ var data = jsonResponse["result"]["data"].ToString();
+ var packages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Package>>(data);
+ //return packages;
+
+
+ return await response.Content.ReadAsStringAsync();
