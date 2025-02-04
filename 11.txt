@@ -178,18 +178,57 @@ public class UserController : ControllerBase
          var parameters = new Dictionary<string, object>();
          parameters.Add("@SearchQuery", $"%{searchQuery.ToLower()}%");
 
-         using (var reader = await command.ExecuteReaderAsync())
-         {
-             while (await reader.ReadAsync())
-             {
-                 users.Add(new ActiveDirectoryUserDto
-                 {
-                     Description = reader["DisplayName"].ToString(),
-                     Mail = reader["Mail"].ToString(),
-                     SamAccountName = reader["InsimID"].ToString(),
-                     UserPrincipalName = reader["OnPremEmail"].ToString()
+       using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
 
-                 });
-             }
-         }
-     }
+public class UserRepository
+{
+    private readonly IAdoNetService _adoNetService;
+
+    public UserRepository(IAdoNetService adoNetService)
+    {
+        _adoNetService = adoNetService;
+    }
+
+    public async Task<List<ActiveDirectoryUserDto>> GetUsersAsync(string searchQuery)
+    {
+        var users = new List<ActiveDirectoryUserDto>();
+
+        try
+        {
+            string query = $@"
+                SELECT Description AS DisplayName, 
+                       Name AS InsimID, 
+                       Mail, 
+                       UserPrincipalName AS OnPremEmail  
+                FROM {TableNames.Jidoka_ActiveDirectory_Users} 
+                WHERE LOWER(Description) LIKE @SearchQuery";
+
+            var parameters = new Dictionary<string, object>
+            {
+                { "@SearchQuery", $"%{searchQuery.ToLower()}%" }
+            };
+
+            DataTable dataTable = await _adoNetService.ExecuteQueryAsync(query, parameters);
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                users.Add(new ActiveDirectoryUserDto
+                {
+                    Description = row["DisplayName"].ToString(),
+                    Mail = row["Mail"].ToString(),
+                    SamAccountName = row["InsimID"].ToString(),
+                    UserPrincipalName = row["OnPremEmail"].ToString()
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+
+        return users;
+    }
+}
