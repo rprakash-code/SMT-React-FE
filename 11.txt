@@ -1,85 +1,22 @@
-using System.Data.SqlClient;
-
-public interface IAzureSqlTokenService
+namespace YourProject.Constants
 {
-    string GetAccessToken();
-    SqlConnection GetSqlConnection();
-}
-
-
-
-
-
-using System;
-using System.Data.SqlClient;
-using Microsoft.Identity.Client;
-using Microsoft.Extensions.Options;
-
-public class AzureSqlTokenService : IAzureSqlTokenService
-{
-    private readonly DbConnectionSettings _dbConnectionSettings;
-
-    public AzureSqlTokenService(IOptions<DbConnectionSettings> dbConnectionSettings)
+    public static class ApiUrls
     {
-        _dbConnectionSettings = dbConnectionSettings.Value;
-    }
+        public const string UserServiceBaseUrl = "https://api.example.com/users";
+        public const string OrderServiceBaseUrl = "https://api.example.com/orders";
+        public const string ProductServiceBaseUrl = "https://api.example.com/products";
 
-    public string GetAccessToken()
-    {
-        var app = ConfidentialClientApplicationBuilder.Create(_dbConnectionSettings.AzureSQLClientId)
-                 .WithClientSecret(_dbConnectionSettings.AzureSQLClientSecret)
-                 .WithAuthority(new Uri($"https://login.microsoftonline.com/{_dbConnectionSettings.TenantId}"))
-                 .Build();
-
-        var result = app.AcquireTokenForClient(new[] { "https://database.windows.net/.default" }).ExecuteAsync().GetAwaiter().GetResult();
-        return result.AccessToken;
-    }
-
-    public SqlConnection GetSqlConnection()
-    {
-        var accessToken = GetAccessToken();
-        var connection = new SqlConnection(_dbConnectionSettings.SqlDatabaseUrl)
+        // Specific Endpoints
+        public static class Users
         {
-            AccessToken = accessToken
-        };
-        connection.Open();
-        return connection;
-    }
-}
+            public const string GetUserById = UserServiceBaseUrl + "/{0}"; // {0} for string.Format()
+            public const string GetAllUsers = UserServiceBaseUrl + "/all";
+        }
 
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Bind settings from appsettings.json
-builder.Services.Configure<DbConnectionSettings>(builder.Configuration.GetSection("DbConnectionSettings"));
-
-// Register the Azure SQL Token Service
-builder.Services.AddSingleton<IAzureSqlTokenService, AzureSqlTokenService>();
-
-var app = builder.Build();
-
-
-
-
-public class MyService
-{
-    private readonly IAzureSqlTokenService _azureSqlTokenService;
-
-    public MyService(IAzureSqlTokenService azureSqlTokenService)
-    {
-        _azureSqlTokenService = azureSqlTokenService;
-    }
-
-    public void SomeDatabaseOperation()
-    {
-        using var connection = _azureSqlTokenService.GetSqlConnection();
-        using var command = new SqlCommand("SELECT TOP 1 * FROM Users", connection);
-        using var reader = command.ExecuteReader();
-
-        while (reader.Read())
+        public static class Orders
         {
-            Console.WriteLine(reader["Name"]);
+            public const string GetOrderById = OrderServiceBaseUrl + "/{0}";
+            public const string GetAllOrders = OrderServiceBaseUrl + "/all";
         }
     }
 }
