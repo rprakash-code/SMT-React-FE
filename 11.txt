@@ -226,3 +226,47 @@ builder.Services.AddScoped<UserService>();
 var app = builder.Build();
 app.MapControllers();
 app.Run();
+
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Post, ServiceNowCMDBUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("NN_SC_API_JP_nn_jp_automation_SNOW:K53D9055Z6A92qB3e2#ONXTQHT3Aa65H67GR"))); // Replace with actual credentials
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            string groupName = "jp";
+          
+
+            string query = $"{ServicenowApiUrls.CMDB.GetSoftwarePacakges}{string.Format(groupName, assignedTo, packageName)}";
+ 
+
+            var body = new
+            {
+                sender_identifier = "nn_jp_automation_SNOWITSMProd",
+                module = "cmdb_ci",
+                table = "cmdb_ci_spkg",
+                fields = new[] { "u_package_type", "assigned_to", "owned_by", "version", "operational_status", "owned_by", "u_managed_by_group", "package_name", "short_description", "u_notes", "u_work_notes", "name", "sys_id", "sys_updated_on", "short_description", "u_notes" },
+                query = query,
+                data_type = "array",
+                limit = 1000,
+                startAt = 1,
+                endAt = 300,
+                order = "DESC",
+                sort = "number",
+                count_only = false
+            };
+
+            request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+            
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+           
+            response.EnsureSuccessStatusCode();
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var jsonResponse = JObject.Parse(responseBody);
+            var data = jsonResponse["result"]["data"].ToString();
+            
+
+            var packages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Package>>(data);
