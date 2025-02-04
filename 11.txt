@@ -1,10 +1,46 @@
-public async Task<User?> GetUserByEmailAsync(string email)
-    {
-        var users = await _graphClient.Users
-            .GetAsync(requestConfiguration =>
-            {
-                requestConfiguration.QueryParameters.Filter = $"mail eq '{email}'";
-            });
+using Microsoft.AspNetCore.Mvc;
 
-        return users?.Value?.FirstOrDefault(); // Return the first matching user
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly GraphService _graphService;
+
+    public AuthController(GraphService graphService)
+    {
+        _graphService = graphService;
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var user = await _graphService.GetUserByEmailAsync(request.Email);
+
+        if (user != null)
+        {
+            return Ok(new
+            {
+                Id = user.Id,
+                Name = user.DisplayName,
+                Email = user.Mail ?? user.UserPrincipalName
+            });
+        }
+
+        return NotFound("User not found in Azure AD.");
+    }
+}
+
+public class LoginRequest
+{
+    public string Email { get; set; }
+}
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddSingleton<GraphService>();
+
+var app = builder.Build();
+app.MapControllers();
+app.Run();
