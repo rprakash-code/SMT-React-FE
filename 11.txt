@@ -1,113 +1,24 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using System.Threading.Tasks;
-
-[Route("api/[controller]")]
-[ApiController]
-public class RITMRequestsController : ControllerBase
-{
-    private readonly RITMRequestService _service;
-    private readonly string _clientId;
-    private readonly string _clientSecret;
-
-    public RITMRequestsController(IConfiguration config)
+    private string GetAccessToken()
     {
-        _service = new RITMRequestService(config);
-        _clientId = config["AzureAd:ClientId"];
-        _clientSecret = config["AzureAd:ClientSecret"];
-    }
+        var app = ConfidentialClientApplicationBuilder.Create(_dbConnectionSettings.AzureSQLClientId)
+                 .WithClientSecret(_dbConnectionSettings.AzureSQLClientSecret)
+                 .WithAuthority(new Uri($"https://login.microsoftonline.com/{_dbConnectionSettings.TenantId}"))
+                 .Build();
 
-    [HttpPost("InsertRITMRequests")]
-    public async Task<IActionResult> InsertRITMRequests([FromBody] RITMRequest request)
+        var result = app.AcquireTokenForClient(new[] { "https://database.windows.net/.default" }).ExecuteAsync().GetAwaiter().GetResult();
+        return result.AccessToken;
+
+    }
+    private SqlConnection GetSqlConnection()
     {
-        // Validate client ID and secret
-        if (!Request.Headers.ContainsKey("ClientId") || !Request.Headers.ContainsKey("ClientSecret"))
+        var accessToken = GetAccessToken();
+        var connection = new SqlConnection(_dbConnectionSettings.SqlDatabaseUrl)
         {
-            return Unauthorized("Client credentials missing.");
-        }
-
-        string clientIdHeader = Request.Headers["ClientId"];
-        string clientSecretHeader = Request.Headers["ClientSecret"];
-
-        if (clientIdHeader != _clientId || clientSecretHeader != _clientSecret)
-        {
-            return Unauthorized("Invalid client credentials.");
-        }
-
-        // Call service to insert request
-        bool isInserted = await _service.InsertRITMRequestAsync(request);
-        if (isInserted)
-            return Ok(new { Message = "Record inserted successfully" });
-        else
-            return StatusCode(500, "Failed to insert record");
+            AccessToken = accessToken
+        };
+        connection.Open();
+        return connection;
     }
-}
-
-
-
-
-
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Data;
-using System.Data.SqlClient;
-using System.Threading.Tasks;
-
-public class RITMRequestService
-{
-    private readonly string _connectionString;
-
-    public RITMRequestService(IConfiguration config)
-    {
-        _connectionString = config.GetConnectionString("DefaultConnection");
-    }
-
-    public async Task<bool> InsertRITMRequestAsync(RITMRequest request)
-    {
-        try
-        {
-            using (SqlConnection conn = new SqlConnection(_connectionString))
-            {
-                await conn.OpenAsync();
-                using (SqlCommand cmd = new SqlCommand(@"
-                    INSERT INTO Jidoka_SNOW_RITM_Requests 
-                    (Number, Request_Type, Status, Short_Description, SCTask_Number, Comment, Created_by, Created_Date) 
-                    VALUES (@Number, @Request_Type, @Status, @Short_Description, @SCTask_Number, @Comment, @Created_by, @Created_Date)", conn))
-                {
-                    cmd.Parameters.AddWithValue("@Number", request.Number);
-                    cmd.Parameters.AddWithValue("@Request_Type", request.Request_Type ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Status", request.Status);
-                    cmd.Parameters.AddWithValue("@Short_Description", request.Short_Description ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@SCTask_Number", request.SCTask_Number ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Comment", request.Comment);
-                    cmd.Parameters.AddWithValue("@Created_by", request.Created_by ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Created_Date", DateTime.UtcNow);
-
-                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
-                    return rowsAffected > 0;
-                }
-            }
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    }
-}
-
-// ✅ Model is defined within the service
-public class RITMRequest
-{
-    public string Number { get; set; }
-    public string? Request_Type { get; set; }
-    public string Status { get; set; }
-    public string? Short_Description { get; set; }
-    public string? SCTask_Number { get; set; }
-  
-
-
-
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
