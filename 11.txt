@@ -1,95 +1,10 @@
-using Azure.Identity;
-using Microsoft.Graph;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Threading.Tasks;
-
-public class GraphService
-{
-    private readonly GraphServiceClient _graphClient;
-
-    public GraphService(IConfiguration config)
+public async Task<User?> GetUserByEmailAsync(string email)
     {
-        // Azure AD app settings from appsettings.json
-        var tenantId = config["AzureAd:TenantId"];
-        var clientId = config["AzureAd:ClientId"];
-        var clientSecret = config["AzureAd:ClientSecret"];
-
-        // Use ClientSecretCredential for authentication
-        var clientSecretCredential = new ClientSecretCredential(
-            tenantId,
-            clientId,
-            clientSecret
-        );
-
-        _graphClient = new GraphServiceClient(clientSecretCredential);
-    }
-
-    public async Task<User> GetUserByEmailAsync(string email)
-    {
-        try
-        {
-            var user = await _graphClient.Users[email]
-                .Request()
-                .Select(u => new { u.Id, u.DisplayName, u.Mail, u.UserPrincipalName })
-                .GetAsync();
-
-            return user;
-        }
-        catch (ServiceException ex)
-        {
-            Console.WriteLine($"Graph API Error: {ex.Message}");
-            return null;
-        }
-    }
-}
-
-
-
-using Microsoft.AspNetCore.Mvc;
-
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
-{
-    private readonly GraphService _graphService;
-
-    public AuthController(GraphService graphService)
-    {
-        _graphService = graphService;
-    }
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
-    {
-        var user = await _graphService.GetUserByEmailAsync(request.Email);
-
-        if (user != null)
-        {
-            return Ok(new
+        var users = await _graphClient.Users
+            .GetAsync(requestConfiguration =>
             {
-                Id = user.Id,
-                Name = user.DisplayName,
-                Email = user.Mail ?? user.UserPrincipalName
+                requestConfiguration.QueryParameters.Filter = $"mail eq '{email}'";
             });
-        }
 
-        return NotFound("User not found in Azure AD.");
+        return users?.Value?.FirstOrDefault(); // Return the first matching user
     }
-}
-
-public class LoginRequest
-{
-    public string Email { get; set; }
-}
-
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllers();
-builder.Services.AddSingleton<GraphService>();
-
-var app = builder.Build();
-app.MapControllers();
-app.Run();
