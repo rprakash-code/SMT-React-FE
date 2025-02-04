@@ -273,3 +273,87 @@ public class UserRepository
                 }
             }
         }
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+
+public class AdoNetService
+{
+    private readonly string _connectionString;
+
+    public AdoNetService(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    public async Task BulkInsertUsersAsync(List<ActiveDirectoryUser> users)
+    {
+        try
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var bulkCopy = new SqlBulkCopy(connection))
+                {
+                    bulkCopy.DestinationTableName = TableNames.Jidoka_ActiveDirectory_Users;
+
+                    // Define column mappings (ensure they match your database schema)
+                    bulkCopy.ColumnMappings.Add("Name", "Name");
+                    bulkCopy.ColumnMappings.Add("Mail", "Mail");
+                    bulkCopy.ColumnMappings.Add("Description", "Description");
+                    bulkCopy.ColumnMappings.Add("Department", "Department");
+                    bulkCopy.ColumnMappings.Add("SamAccountName", "SamAccountName");
+                    bulkCopy.ColumnMappings.Add("UserPrincipalName", "UserPrincipalName");
+                    bulkCopy.ColumnMappings.Add("ExtensionAttribute7", "ExtensionAttribute7");
+
+                    // Convert List to DataTable
+                    DataTable userDataTable = ConvertToDataTable(users);
+
+                    // Perform Bulk Insert
+                    await bulkCopy.WriteToServerAsync(userDataTable);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Bulk Insert Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    private DataTable ConvertToDataTable(List<ActiveDirectoryUser> users)
+    {
+        DataTable table = new DataTable();
+        table.Columns.Add("Name", typeof(string));
+        table.Columns.Add("Mail", typeof(string));
+        table.Columns.Add("Description", typeof(string));
+        table.Columns.Add("Department", typeof(string));
+        table.Columns.Add("SamAccountName", typeof(string));
+        table.Columns.Add("UserPrincipalName", typeof(string));
+        table.Columns.Add("ExtensionAttribute7", typeof(string));
+
+        foreach (var user in users)
+        {
+            table.Rows.Add(
+                user.Name,
+                user.Mail ?? DBNull.Value.ToString(),
+                user.Description ?? DBNull.Value.ToString(),
+                user.Department ?? DBNull.Value.ToString(),
+                user.SamAccountName,
+                user.UserPrincipalName,
+                user.ExtensionAttribute7
+            );
+        }
+
+        return table;
+    }
+}
+
