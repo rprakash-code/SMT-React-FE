@@ -1,46 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
-
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
-{
-    private readonly GraphService _graphService;
-
-    public AuthController(GraphService graphService)
-    {
-        _graphService = graphService;
-    }
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
-    {
-        var user = await _graphService.GetUserByEmailAsync(request.Email);
-
-        if (user != null)
-        {
-            return Ok(new
-            {
-                Id = user.Id,
-                Name = user.DisplayName,
-                Email = user.Mail ?? user.UserPrincipalName
-            });
-        }
-
-        return NotFound("User not found in Azure AD.");
-    }
-}
-
-public class LoginRequest
-{
-    public string Email { get; set; }
-}
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllers();
-builder.Services.AddSingleton<GraphService>();
-
-var app = builder.Build();
-app.MapControllers();
-app.Run();
+[Jidoka_SNOW_RITM_Requests](
+	[Number] [varchar](30) NOT NULL,
+	[Request_Type] [varchar](30) NULL,
+	[Status] [varchar](20) NOT NULL,
+	[Short_Description] [varchar](1000) NULL,
+	[SCTask_Number] [varchar](30) NULL,
+	[Comment] [varchar](500) NOT NULL,
+	[Created_by] [varchar](100) NULL,
+	[Created_Date] [datetime] NULL,
+	[Modify_by] [varchar](100) NULL,
+	[Modify_Date] [datetime] NULL
