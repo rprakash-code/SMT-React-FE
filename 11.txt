@@ -1,359 +1,125 @@
-using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
-
-public interface IAdoNetService
-{
-    Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters = null);
-    Task<object> ExecuteScalarAsync(string query, Dictionary<string, object> parameters = null);
-    Task<DataTable> ExecuteQueryAsync(string query, Dictionary<string, object> parameters = null);
-}
-
-
-
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-
-public class AdoNetService : IAdoNetService
-{
-    private readonly string _connectionString;
-    private readonly ILogger<AdoNetService> _logger;
-
-    public AdoNetService(IConfiguration configuration, ILogger<AdoNetService> logger)
-    {
-        _connectionString = configuration.GetConnectionString("DefaultConnection"); // Ensure this exists in appsettings.json
-        _logger = logger;
-    }
-
-    public async Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters = null)
-    {
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            using (var command = new SqlCommand(query, connection))
-            {
-                AddParameters(command, parameters);
-                return await command.ExecuteNonQueryAsync();
-            }
-        }
-    }
-
-    public async Task<object> ExecuteScalarAsync(string query, Dictionary<string, object> parameters = null)
-    {
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            using (var command = new SqlCommand(query, connection))
-            {
-                AddParameters(command, parameters);
-                return await command.ExecuteScalarAsync();
-            }
-        }
-    }
-
-    public async Task<DataTable> ExecuteQueryAsync(string query, Dictionary<string, object> parameters = null)
-    {
-        using (var connection = new SqlConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            using (var command = new SqlCommand(query, connection))
-            {
-                AddParameters(command, parameters);
-                using (var adapter = new SqlDataAdapter(command))
-                {
-                    DataTable dataTable = new DataTable();
-                    adapter.Fill(dataTable);
-                    return dataTable;
-                }
-            }
-        }
-    }
-
-    private void AddParameters(SqlCommand command, Dictionary<string, object> parameters)
-    {
-        if (parameters != null)
-        {
-            foreach (var param in parameters)
-            {
-                command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
-            }
-        }
-    }
-}
-
-
-
-
-
-
-
-// ✅ Register AdoNetService as a Scoped Service
-builder.Services.AddScoped<IAdoNetService, AdoNetService>();
-
-
-
-using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
-
-public class UserRepository
-{
-    private readonly IAdoNetService _adoNetService;
-
-    public UserRepository(IAdoNetService adoNetService)
-    {
-        _adoNetService = adoNetService;
-    }
-
-    public async Task<int> AddUserAsync(string name, string email)
-    {
-        string query = "INSERT INTO Users (Name, Email) VALUES (@Name, @Email)";
-        var parameters = new Dictionary<string, object>
-        {
-            { "@Name", name },
-            { "@Email", email }
-        };
-        return await _adoNetService.ExecuteNonQueryAsync(query, parameters);
-    }
-
-    public async Task<DataTable> GetAllUsersAsync()
-    {
-        string query = "SELECT * FROM Users";
-        return await _adoNetService.ExecuteQueryAsync(query);
-    }
-}
-
-
-
-
-
-
-
-using Microsoft.AspNetCore.Mvc;
-using System.Data;
-using System.Threading.Tasks;
-
-[Route("api/users")]
-[ApiController]
-public class UserController : ControllerBase
-{
-    private readonly UserRepository _userRepository;
-
-    public UserController(UserRepository userRepository)
-    {
-        _userRepository = userRepository;
-    }
-
-    [HttpPost("add")]
-    public async Task<IActionResult> AddUser(string name, string email)
-    {
-        int rowsAffected = await _userRepository.AddUserAsync(name, email);
-        return Ok(new { message = "User added successfully", rowsAffected });
-    }
-
-    [HttpGet("all")]
-    public async Task<IActionResult> GetAllUsers()
-    {
-        DataTable users = await _userRepository.GetAllUsersAsync();
-        return Ok(users);
-    }
-}
-
-
-
-
-
- public async Task<List<ActiveDirectoryUserDto>> GetUsersAsync(string searchQuery)
- {
-     var users = new List<ActiveDirectoryUserDto>();
-     try
-     {
-         var query = $@"
-            SELECT Description as DisplayName, Name as InsimID, Mail, UserPrincipalName as OnPremEmail  FROM {TableNames.Jidoka_ActiveDirectory_Users} WHERE lower(Description) LIKE @SearchQuery";
-         var parameters = new Dictionary<string, object>();
-         parameters.Add("@SearchQuery", $"%{searchQuery.ToLower()}%");
-
-       using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
-
-public class UserRepository
-{
-    private readonly IAdoNetService _adoNetService;
-
-    public UserRepository(IAdoNetService adoNetService)
-    {
-        _adoNetService = adoNetService;
-    }
-
-    public async Task<List<ActiveDirectoryUserDto>> GetUsersAsync(string searchQuery)
-    {
-        var users = new List<ActiveDirectoryUserDto>();
-
-        try
-        {
-            string query = $@"
-                SELECT Description AS DisplayName, 
-                       Name AS InsimID, 
-                       Mail, 
-                       UserPrincipalName AS OnPremEmail  
-                FROM {TableNames.Jidoka_ActiveDirectory_Users} 
-                WHERE LOWER(Description) LIKE @SearchQuery";
-
-            var parameters = new Dictionary<string, object>
-            {
-                { "@SearchQuery", $"%{searchQuery.ToLower()}%" }
-            };
-
-            DataTable dataTable = await _adoNetService.ExecuteQueryAsync(query, parameters);
-
-            foreach (DataRow row in dataTable.Rows)
-            {
-                users.Add(new ActiveDirectoryUserDto
-                {
-                    Description = row["DisplayName"].ToString(),
-                    Mail = row["Mail"].ToString(),
-                    SamAccountName = row["InsimID"].ToString(),
-                    UserPrincipalName = row["OnPremEmail"].ToString()
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-
-        return users;
-    }
-}
-
-
- // Insert multiple users into the database
-        public async Task InsertUsersAsync(List<ActiveDirectoryUser> users)
-        {
-            using var connection = _azureSqlTokenService.GetSqlConnection();
-            try
-            {
-                await connection.OpenAsync();
-
-                foreach (var user in users)
-                {
-                    var query = $@"INSERT INTO {TableNames.Jidoka_ActiveDirectory_Users} (Name, Mail, Description, Department, SamAccountName, UserPrincipalName, ExtensionAttribute7) 
-                              VALUES (@Name, @Mail, @Description, @Department, @SamAccountName, @UserPrincipalName, @ExtensionAttribute7)";
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Name", user.Name);
-                        command.Parameters.AddWithValue("@Mail", (object)user.Mail ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Description", (object)user.Description ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Department", (object)user.Department ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@SamAccountName", user.SamAccountName);
-                        command.Parameters.AddWithValue("@UserPrincipalName", user.UserPrincipalName);
-                        command.Parameters.AddWithValue("@ExtensionAttribute7", user.ExtensionAttribute7);
-
-
-                        await command.ExecuteNonQueryAsync();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Error Creating SQL Connection", ex);
-            }
-            finally
-            {
-                if (connection.State == System.Data.ConnectionState.Open)
-                {
-                    await connection.CloseAsync();
-                }
-            }
-        }
-
-
-
-
-
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Threading.Tasks;
-
-public class AdoNetService
-{
-    private readonly string _connectionString;
-
-    public AdoNetService(string connectionString)
-    {
-        _connectionString = connectionString;
-    }
-
-    public async Task BulkInsertUsersAsync(List<ActiveDirectoryUser> users)
-    {
-        try
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
-
-                using (var bulkCopy = new SqlBulkCopy(connection))
-                {
-                    bulkCopy.DestinationTableName = TableNames.Jidoka_ActiveDirectory_Users;
-
-                    // Define column mappings (ensure they match your database schema)
-                    bulkCopy.ColumnMappings.Add("Name", "Name");
-                    bulkCopy.ColumnMappings.Add("Mail", "Mail");
-                    bulkCopy.ColumnMappings.Add("Description", "Description");
-                    bulkCopy.ColumnMappings.Add("Department", "Department");
-                    bulkCopy.ColumnMappings.Add("SamAccountName", "SamAccountName");
-                    bulkCopy.ColumnMappings.Add("UserPrincipalName", "UserPrincipalName");
-                    bulkCopy.ColumnMappings.Add("ExtensionAttribute7", "ExtensionAttribute7");
-
-                    // Convert List to DataTable
-                    DataTable userDataTable = ConvertToDataTable(users);
-
-                    // Perform Bulk Insert
-                    await bulkCopy.WriteToServerAsync(userDataTable);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Bulk Insert Error: {ex.Message}");
-            throw;
-        }
-    }
-
-    private DataTable ConvertToDataTable(List<ActiveDirectoryUser> users)
-    {
-        DataTable table = new DataTable();
-        table.Columns.Add("Name", typeof(string));
-        table.Columns.Add("Mail", typeof(string));
-        table.Columns.Add("Description", typeof(string));
-        table.Columns.Add("Department", typeof(string));
-        table.Columns.Add("SamAccountName", typeof(string));
-        table.Columns.Add("UserPrincipalName", typeof(string));
-        table.Columns.Add("ExtensionAttribute7", typeof(string));
-
-        foreach (var user in users)
-        {
-            table.Rows.Add(
-                user.Name,
-                user.Mail ?? DBNull.Value.ToString(),
-                user.Description ?? DBNull.Value.ToString(),
-                user.Department ?? DBNull.Value.ToString(),
-                user.SamAccountName,
-                user.UserPrincipalName,
-                user.ExtensionAttribute7
-            );
-        }
-
-        return table;
-    }
-}
+Users belong to Divisions.
+Divisions contain multiple Departments.
+Departments have Menus.
+Roles control what Menus a user can access.
+A Division Manager has access to all departments within their division.
+📦 2. SQL Table Structure
+✅ 1. Users Table
+sql
+Copy
+Edit
+CREATE TABLE Users (
+    UserId INT PRIMARY KEY IDENTITY(1,1),
+    Email NVARCHAR(255) UNIQUE NOT NULL,
+    PasswordHash NVARCHAR(255) NOT NULL, -- Store hashed passwords
+    FullName NVARCHAR(255),
+    IsActive BIT DEFAULT 1
+);
+✅ 2. Divisions Table
+sql
+Copy
+Edit
+CREATE TABLE Divisions (
+    DivisionId INT PRIMARY KEY IDENTITY(1,1),
+    DivisionName NVARCHAR(255) NOT NULL
+);
+✅ 3. Departments Table
+sql
+Copy
+Edit
+CREATE TABLE Departments (
+    DepartmentId INT PRIMARY KEY IDENTITY(1,1),
+    DepartmentName NVARCHAR(255) NOT NULL,
+    DivisionId INT FOREIGN KEY REFERENCES Divisions(DivisionId)
+);
+✅ 4. Roles Table
+sql
+Copy
+Edit
+CREATE TABLE Roles (
+    RoleId INT PRIMARY KEY IDENTITY(1,1),
+    RoleName NVARCHAR(100) NOT NULL -- e.g., 'Admin', 'Division Manager', 'Department User'
+);
+✅ 5. UserRoles Table (Many-to-Many Relationship)
+sql
+Copy
+Edit
+CREATE TABLE UserRoles (
+    UserRoleId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT FOREIGN KEY REFERENCES Users(UserId),
+    RoleId INT FOREIGN KEY REFERENCES Roles(RoleId),
+    DepartmentId INT NULL, -- Nullable for Division Manager (who can access all departments)
+    DivisionId INT NULL    -- Division ID for Division Manager
+);
+✅ 6. Menus Table
+sql
+Copy
+Edit
+CREATE TABLE Menus (
+    MenuId INT PRIMARY KEY IDENTITY(1,1),
+    MenuName NVARCHAR(255) NOT NULL,
+    Url NVARCHAR(255),         -- Frontend route/link
+    DepartmentId INT FOREIGN KEY REFERENCES Departments(DepartmentId)
+);
+✅ 7. RoleMenus Table (Role-Based Menu Permissions)
+sql
+Copy
+Edit
+CREATE TABLE RoleMenus (
+    RoleMenuId INT PRIMARY KEY IDENTITY(1,1),
+    RoleId INT FOREIGN KEY REFERENCES Roles(RoleId),
+    MenuId INT FOREIGN KEY REFERENCES Menus(MenuId)
+);
+🎯 3. How It Works (Sample Workflow)
+User Logs In with Email:
+
+Validate credentials from Users table.
+Fetch user roles from UserRoles (check for Division Manager role or Department-specific role).
+Division Selection:
+
+Fetch divisions assigned to the user (if applicable).
+A Division Manager sees all departments within the division.
+Department Navigation:
+
+Based on the selected division, list departments (Departments table).
+Filter based on user’s assigned departments.
+Menu Display:
+
+Fetch menus using RoleMenus based on the user’s role and department.
+Division Managers will see menus from all departments in the division.
+📑 4. Example Data
+Roles Table Example:
+RoleId	RoleName
+1	Admin
+2	Division Manager
+3	Department User
+UserRoles Example:
+UserRoleId	UserId	RoleId	DivisionId	DepartmentId
+1	1	2	1	NULL
+2	2	3	NULL	3
+User 1: Division Manager for Division 1
+User 2: Department User for Department 3
+🔑 5. SQL Query Examples
+📋 Fetch Departments Based on Division Selection
+sql
+Copy
+Edit
+SELECT DepartmentId, DepartmentName
+FROM Departments
+WHERE DivisionId = @SelectedDivisionId;
+📋 Fetch Menus Based on User Roles
+sql
+Copy
+Edit
+SELECT DISTINCT m.MenuId, m.MenuName, m.Url
+FROM Menus m
+JOIN RoleMenus rm ON m.MenuId = rm.MenuId
+JOIN UserRoles ur ON rm.RoleId = ur.RoleId
+WHERE (ur.UserId = @UserId AND (ur.DepartmentId = m.DepartmentId OR ur.DivisionId IS NOT NULL))
+If the user is a Division Manager (DivisionId is not NULL), they see all menus in the division.
+Department Users only see menus for their department.
+🚀 6. Scalability Considerations
+Add an IsActive column in tables to handle deactivation without deletion.
+Use indexes on UserId, DepartmentId, DivisionId for faster queries.
+Consider adding audit logs for role/menu changes.
 
