@@ -1,67 +1,93 @@
-1. Insert into productname_org_divisions
-sql
-Copy
-Edit
-INSERT INTO productname_org_divisions (DivisionName, Description, IsActive)
-VALUES 
-    ('Sales Division', 'Handles all sales-related activities', 1),
-    ('Marketing Division', 'Responsible for marketing strategies', 1),
-    ('Finance Division', 'Manages financial operations', 0); -- Inactive Division
-🚀 2. Insert into productname_org_departments
-sql
-Copy
-Edit
-INSERT INTO productname_org_departments (DepartmentName, DivisionId, CreatedDate, IsActive)
-VALUES 
-    ('Regional Sales', 1, GETDATE(), 1),
-    ('Digital Marketing', 2, GETDATE(), 1),
-    ('Accounts Payable', 3, GETDATE(), 0); -- Inactive Department
-Note: Make sure the DivisionId exists in the productname_org_divisions table.
-🚀 3. Insert into productname_org_roles
-sql
-Copy
-Edit
-INSERT INTO productname_org_roles (RoleName, Description, IsActive)
-VALUES 
-    ('Admin', 'Full access to all system features', 1),
-    ('Division Manager', 'Manages division-specific data', 1),
-    ('Department User', 'Access limited to assigned department', 1),
-    ('Auditor', 'Read-only access for audits', 0); -- Inactive Role
-🚀 4. Insert into productname_org_users
-sql
-Copy
-Edit
-INSERT INTO productname_org_users (Email, FullName, PasswordHash, IsActive, CreatedDate)
-VALUES 
-    ('john.doe@example.com', 'John Doe', 'hashed_password_123', 1, GETDATE()),
-    ('jane.smith@example.com', 'Jane Smith', 'hashed_password_456', 1, GETDATE()),
-    ('mark.jones@example.com', 'Mark Jones', 'hashed_password_789', 0, GETDATE()); -- Inactive User
-Replace 'hashed_password_123' with the actual hashed password.
-⚡ 5. Insert Example with Conditional IsActive Logic
-If you want to insert data where IsActive is always 1 by default (without specifying it), ensure the column has a default constraint:
+Something went wrong!
+Cannot read properties of undefined (reading 'length')
+TypeError: Cannot read properties of undefined (reading 'length')
+    at accessRows (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:2626:40)
+    at http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:2641:21
+    at Object._getCoreRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:76:14)
+    at Object.getCoreRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:2523:20)
+    at table.getPreFilteredRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:694:48)
+    at table.getFilteredRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:700:22)
+    at table.getPreGroupedRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:872:47)
+    at table.getGroupedRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:878:22)
+    at table.getPreSortedRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:2417:46)
+    at table.getSortedRowModel (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-table.js?v=4a31658a:2423:22)
 
-sql
-Copy
-Edit
-ALTER TABLE productname_org_divisions
-ADD CONSTRAINT DF_IsActive DEFAULT 1 FOR IsActive;
-Then you can insert without explicitly mentioning IsActive:
 
-sql
-Copy
-Edit
-INSERT INTO productname_org_divisions (DivisionName, Description)
-VALUES ('IT Division', 'Handles all IT-related operations');
-🔍 6. Verify Inserted Data
-To check the active records:
+getCoreRowModel.ts:31  Uncaught TypeError: Cannot read properties of undefined (reading 'length')
+    at accessRows (getCoreRowModel.ts:31:44)
+    at getCoreRowModel.ts:74:25
+    at Object._getCoreRowModel (utils.ts:167:14)
+    at Object.getCoreRowModel (table.ts:384:20)
+    at table.getPreFilteredRowModel (ColumnFiltering.ts:402:48)
+    at table.getFilteredRowModel (ColumnFiltering.ts:409:22)
+    at table.getPreGroupedRowModel (ColumnGrouping.ts:344:47)
+    at table.getGroupedRowModel (ColumnGrouping.ts:351:22)
+    at table.getPreSortedRowModel (RowSorting.ts:529:46)
+    at table.getSortedRowModel (RowSorting.ts:536:22)
 
-sql
-Copy
-Edit
-SELECT * FROM productname_org_divisions WHERE IsActive = 1;
-To view inactive records:
 
-sql
-Copy
-Edit
-SELECT * FROM productname_org_divisions WHERE IsActive = 0;
+
+
+
+
+react-dom.development.js:18704 
+ The above error occurred in the <DataTable> component:
+
+    at DataTable (http://localhost:5173/src/components/common/table/data-table.tsx:34:3)
+    at section
+    at div
+    at PackageUserDetails (http://localhost:5173/src/features/service-now/components/software-review/package-user-list.tsx:25:34)
+    at section
+    at form
+    at FormProvider (http://localhost:5173/node_modules/.vite/deps/chunk-NQMQKEWZ.js?v=4a31658a:103:11)
+    at SoftwareReview (http://localhost:5173/src/features/service-now/components/software-review/index.tsx:31:33)
+    at InnerLoadable2 (http://localhost:5173/node_modules/.vite/deps/@loadable_component.js?v=4a31658a:227:34)
+    at LoadableWithChunkExtractor2
+    at Loadable
+    at section
+    at section
+    at SoftwareProvider (http://localhost:5173/src/features/service-now/context/software-context.tsx:23:3)
+    at ServiceNowPage (http://localhost:5173/src/features/service-now/page/service-now.page.tsx:84:34)
+    at ServiceNow
+    at InnerLoadable2 (http://localhost:5173/node_modules/.vite/deps/@loadable_component.js?v=4a31658a:227:34)
+    at LoadableWithChunkExtractor2
+    at Loadable
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:5362:26)
+    at RenderErrorBoundary (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:5321:5)
+    at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:6026:26)
+    at section
+    at main
+    at _c9 (http://localhost:5173/src/components/ui/sidebar.tsx:398:48)
+    at div
+    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-MDGLY7RA.js?v=4a31658a:38:15)
+    at TooltipProvider (http://localhost:5173/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=4a31658a:58:5)
+    at http://localhost:5173/src/components/ui/sidebar.tsx:54:7
+    at ThemeProvider (http://localhost:5173/src/providers/theme/theme-provider.tsx:25:3)
+    at ThemeProviderWrapper (http://localhost:5173/src/providers/theme/theme-provider-wrapper.tsx:21:3)
+    at MainLayout
+    at ProtectedRoute (http://localhost:5173/src/components/auth/protected-route.tsx:19:27)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:5362:26)
+    at RenderErrorBoundary (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:5321:5)
+    at DataRoutes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:5950:3)
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:6035:13)
+    at RouterProvider (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=4a31658a:5780:11)
+    at RouterProvider2
+    at ThemeProvider (http://localhost:5173/src/providers/theme/theme-provider.tsx:25:3)
+    at QueryClientProvider (http://localhost:5173/node_modules/.vite/deps/chunk-EPSN5JUE.js?v=4a31658a:2829:3)
+    at Provider (http://localhost:5173/node_modules/.vite/deps/react-redux.js?v=4a31658a:923:11)
+    at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, RenderErrorBoundary.
+chunk-SYFQ2XB5.mjs:4341 
+ React Router caught the following error during render TypeError: Cannot read properties of undefined (reading 'length')
+    at accessRows (getCoreRowModel.ts:31:44)
+    at getCoreRowModel.ts:74:25
+    at Object._getCoreRowModel (utils.ts:167:14)
+    at Object.getCoreRowModel (table.ts:384:20)
+    at table.getPreFilteredRowModel (ColumnFiltering.ts:402:48)
+    at table.getFilteredRowModel (ColumnFiltering.ts:409:22)
+    at table.getPreGroupedRowModel (ColumnGrouping.ts:344:47)
+    at table.getGroupedRowModel (ColumnGrouping.ts:351:22)
+    at table.getPreSortedRowModel (RowSorting.ts:529:46)
+    at table.getSortedRowModel (RowSorting.ts:536:22) 
+Object
