@@ -1,125 +1,67 @@
-Users belong to Divisions.
-Divisions contain multiple Departments.
-Departments have Menus.
-Roles control what Menus a user can access.
-A Division Manager has access to all departments within their division.
-📦 2. SQL Table Structure
-✅ 1. Users Table
+1. Insert into productname_org_divisions
 sql
 Copy
 Edit
-CREATE TABLE Users (
-    UserId INT PRIMARY KEY IDENTITY(1,1),
-    Email NVARCHAR(255) UNIQUE NOT NULL,
-    PasswordHash NVARCHAR(255) NOT NULL, -- Store hashed passwords
-    FullName NVARCHAR(255),
-    IsActive BIT DEFAULT 1
-);
-✅ 2. Divisions Table
+INSERT INTO productname_org_divisions (DivisionName, Description, IsActive)
+VALUES 
+    ('Sales Division', 'Handles all sales-related activities', 1),
+    ('Marketing Division', 'Responsible for marketing strategies', 1),
+    ('Finance Division', 'Manages financial operations', 0); -- Inactive Division
+🚀 2. Insert into productname_org_departments
 sql
 Copy
 Edit
-CREATE TABLE Divisions (
-    DivisionId INT PRIMARY KEY IDENTITY(1,1),
-    DivisionName NVARCHAR(255) NOT NULL
-);
-✅ 3. Departments Table
+INSERT INTO productname_org_departments (DepartmentName, DivisionId, CreatedDate, IsActive)
+VALUES 
+    ('Regional Sales', 1, GETDATE(), 1),
+    ('Digital Marketing', 2, GETDATE(), 1),
+    ('Accounts Payable', 3, GETDATE(), 0); -- Inactive Department
+Note: Make sure the DivisionId exists in the productname_org_divisions table.
+🚀 3. Insert into productname_org_roles
 sql
 Copy
 Edit
-CREATE TABLE Departments (
-    DepartmentId INT PRIMARY KEY IDENTITY(1,1),
-    DepartmentName NVARCHAR(255) NOT NULL,
-    DivisionId INT FOREIGN KEY REFERENCES Divisions(DivisionId)
-);
-✅ 4. Roles Table
+INSERT INTO productname_org_roles (RoleName, Description, IsActive)
+VALUES 
+    ('Admin', 'Full access to all system features', 1),
+    ('Division Manager', 'Manages division-specific data', 1),
+    ('Department User', 'Access limited to assigned department', 1),
+    ('Auditor', 'Read-only access for audits', 0); -- Inactive Role
+🚀 4. Insert into productname_org_users
 sql
 Copy
 Edit
-CREATE TABLE Roles (
-    RoleId INT PRIMARY KEY IDENTITY(1,1),
-    RoleName NVARCHAR(100) NOT NULL -- e.g., 'Admin', 'Division Manager', 'Department User'
-);
-✅ 5. UserRoles Table (Many-to-Many Relationship)
-sql
-Copy
-Edit
-CREATE TABLE UserRoles (
-    UserRoleId INT PRIMARY KEY IDENTITY(1,1),
-    UserId INT FOREIGN KEY REFERENCES Users(UserId),
-    RoleId INT FOREIGN KEY REFERENCES Roles(RoleId),
-    DepartmentId INT NULL, -- Nullable for Division Manager (who can access all departments)
-    DivisionId INT NULL    -- Division ID for Division Manager
-);
-✅ 6. Menus Table
-sql
-Copy
-Edit
-CREATE TABLE Menus (
-    MenuId INT PRIMARY KEY IDENTITY(1,1),
-    MenuName NVARCHAR(255) NOT NULL,
-    Url NVARCHAR(255),         -- Frontend route/link
-    DepartmentId INT FOREIGN KEY REFERENCES Departments(DepartmentId)
-);
-✅ 7. RoleMenus Table (Role-Based Menu Permissions)
-sql
-Copy
-Edit
-CREATE TABLE RoleMenus (
-    RoleMenuId INT PRIMARY KEY IDENTITY(1,1),
-    RoleId INT FOREIGN KEY REFERENCES Roles(RoleId),
-    MenuId INT FOREIGN KEY REFERENCES Menus(MenuId)
-);
-🎯 3. How It Works (Sample Workflow)
-User Logs In with Email:
+INSERT INTO productname_org_users (Email, FullName, PasswordHash, IsActive, CreatedDate)
+VALUES 
+    ('john.doe@example.com', 'John Doe', 'hashed_password_123', 1, GETDATE()),
+    ('jane.smith@example.com', 'Jane Smith', 'hashed_password_456', 1, GETDATE()),
+    ('mark.jones@example.com', 'Mark Jones', 'hashed_password_789', 0, GETDATE()); -- Inactive User
+Replace 'hashed_password_123' with the actual hashed password.
+⚡ 5. Insert Example with Conditional IsActive Logic
+If you want to insert data where IsActive is always 1 by default (without specifying it), ensure the column has a default constraint:
 
-Validate credentials from Users table.
-Fetch user roles from UserRoles (check for Division Manager role or Department-specific role).
-Division Selection:
-
-Fetch divisions assigned to the user (if applicable).
-A Division Manager sees all departments within the division.
-Department Navigation:
-
-Based on the selected division, list departments (Departments table).
-Filter based on user’s assigned departments.
-Menu Display:
-
-Fetch menus using RoleMenus based on the user’s role and department.
-Division Managers will see menus from all departments in the division.
-📑 4. Example Data
-Roles Table Example:
-RoleId	RoleName
-1	Admin
-2	Division Manager
-3	Department User
-UserRoles Example:
-UserRoleId	UserId	RoleId	DivisionId	DepartmentId
-1	1	2	1	NULL
-2	2	3	NULL	3
-User 1: Division Manager for Division 1
-User 2: Department User for Department 3
-🔑 5. SQL Query Examples
-📋 Fetch Departments Based on Division Selection
 sql
 Copy
 Edit
-SELECT DepartmentId, DepartmentName
-FROM Departments
-WHERE DivisionId = @SelectedDivisionId;
-📋 Fetch Menus Based on User Roles
+ALTER TABLE productname_org_divisions
+ADD CONSTRAINT DF_IsActive DEFAULT 1 FOR IsActive;
+Then you can insert without explicitly mentioning IsActive:
+
 sql
 Copy
 Edit
-SELECT DISTINCT m.MenuId, m.MenuName, m.Url
-FROM Menus m
-JOIN RoleMenus rm ON m.MenuId = rm.MenuId
-JOIN UserRoles ur ON rm.RoleId = ur.RoleId
-WHERE (ur.UserId = @UserId AND (ur.DepartmentId = m.DepartmentId OR ur.DivisionId IS NOT NULL))
-If the user is a Division Manager (DivisionId is not NULL), they see all menus in the division.
-Department Users only see menus for their department.
-🚀 6. Scalability Considerations
-Add an IsActive column in tables to handle deactivation without deletion.
-Use indexes on UserId, DepartmentId, DivisionId for faster queries.
-Consider adding audit logs for role/menu changes.
+INSERT INTO productname_org_divisions (DivisionName, Description)
+VALUES ('IT Division', 'Handles all IT-related operations');
+🔍 6. Verify Inserted Data
+To check the active records:
 
+sql
+Copy
+Edit
+SELECT * FROM productname_org_divisions WHERE IsActive = 1;
+To view inactive records:
+
+sql
+Copy
+Edit
+SELECT * FROM productname_org_divisions WHERE IsActive = 0;
